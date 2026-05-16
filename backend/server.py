@@ -1,74 +1,233 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-import os
-import logging
+import os, sys, logging, json, uuid, time
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List
-import uuid
+from pydantic import BaseModel
+from typing import Optional, List
 from datetime import datetime, timezone
-
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
+# Make FXION package importable
+sys.path.insert(0, str(ROOT_DIR / 'fxion'))
+sys.path.insert(0, str(ROOT_DIR / 'fxion' / 'core'))
+
+# FXION-ONYX modules
+from fxion.system_class import FXIONSystem, QUANTS
+from fxion.qfx_optimizer import QFXOptimizer, QUANT_PROFILES
+from fxion.nnox_scheduler import NNOXScheduler
+from fxion.onyx_runtime import ONYXRuntime
+from fxion import qint_int2, ztds_entropy, xyz_elliptic, neuron_bridge, quantum_entropy
+
+# MongoDB
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+mongo_client = AsyncIOMotorClient(mongo_url)
+db = mongo_client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
-app = FastAPI()
+app = FastAPI(title="FXION-ONYX Command API")
+api = APIRouter(prefix="/api")
 
-# Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
+# Single shared FXION engine instance (in-process)
+ENGINE = FXIONSystem()
+ENGINE.start()
+
+logging.basicConfig(level=logging.INFO,
+    format='[%(asctime)s] %(name)s %(levelname)s - %(message)s')
+log = logging.getLogger("FXION_API")
 
 
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+# ────────── Request models ──────────
+class OptimizeReq(BaseModel):
+    rounds: int = 12
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+class RouteReq(BaseModel):
+    jobs: int = 8
 
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
+class RuntimeReq(BaseModel):
+    steps: int = 6
+
+class EncryptReq(BaseModel):
+    message: str
+    key: Optional[str] = "FXION-ONYX-ZTDS-2026"
+
+class CompressReq(BaseModel):
+    size: int = 4096
+    seed: int = 42
+
+class EntropyReq(BaseModel):
+    size: int = 1024
+
+
+# ────────── Core ──────────
+@api.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"service": "FXION-ONYX Command API", "version": "FINAL-Q8", "status": "online"}
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
+@api.get("/manifest")
+async def manifest():
+    with open(ROOT_DIR / "fxion" / "manifest.json") as f:
+        return json.load(f)
 
-# Include the router in the main app
-app.include_router(api_router)
 
+@api.get("/system/status")
+async def system_status():
+    return ENGINE.status()
+
+
+@api.post("/system/gpu-loop")
+async def gpu_loop(req: RuntimeReq):
+    ENGINE.gpu_loop(iterations=max(1, min(req.steps, 50)))
+    return {
+        "ok": True,
+        "best_quant": ENGINE.policy.best(),
+        "history": ENGINE.history[-req.steps:],
+        "policy": ENGINE.policy.summary(),
+    }
+
+
+@api.post("/system/reset")
+async def system_reset():
+    global ENGINE
+    ENGINE = FXIONSystem()
+    ENGINE.start()
+    await db.fxion_runs.insert_one({
+        "id": str(uuid.uuid4()),
+        "event": "engine_reset",
+        "ts": datetime.now(timezone.utc).isoformat(),
+    })
+    return {"ok": True, "status": ENGINE.status()}
+
+
+# ────────── QFX Optimizer ──────────
+@api.post("/qfx/optimize")
+async def qfx_optimize(req: OptimizeReq):
+    opt = QFXOptimizer(ENGINE)
+    rounds = max(1, min(req.rounds, 60))
+    opt.optimize(rounds=rounds)
+    rep = opt.report()
+    rep["log"] = opt.log
+    await db.fxion_runs.insert_one({
+        "id": str(uuid.uuid4()), "event": "qfx_optimize",
+        "rounds": rounds, "best": rep["best"],
+        "ts": datetime.now(timezone.utc).isoformat(),
+    })
+    return rep
+
+
+@api.get("/qfx/profiles")
+async def qfx_profiles():
+    return {"profiles": QUANT_PROFILES}
+
+
+# ────────── NNOX Scheduler ──────────
+@api.post("/nnox/route")
+async def nnox_route(req: RouteReq):
+    sched = NNOXScheduler(ENGINE)
+    sched.route(jobs=max(1, min(req.jobs, 40)))
+    return {"summary": sched.summary(), "routes": sched.routes}
+
+
+# ────────── ONYX Runtime ──────────
+@api.post("/onyx/run")
+async def onyx_run(req: RuntimeReq):
+    rt = ONYXRuntime(ENGINE)
+    rt.run(steps=max(1, min(req.steps, 30)))
+    return {"report": rt.report(), "metrics": rt.metrics}
+
+
+# ────────── Experimental: QINT INT2 ──────────
+@api.post("/qint/compress")
+async def qint_compress(req: CompressReq):
+    rep = qint_int2.compress_report(size=max(64, min(req.size, 65536)), seed=req.seed)
+    return rep
+
+
+# ────────── ZTDS Dynamic Entropy XOR ──────────
+@api.post("/ztds/encrypt")
+async def ztds_encrypt(req: EncryptReq):
+    if not req.message:
+        raise HTTPException(400, "message required")
+    return ztds_entropy.encrypt_demo(req.message, req.key)
+
+
+# ────────── X/Y/Z Axial Elliptic Cybersecurity ──────────
+@api.get("/xyz/handshake")
+async def xyz_handshake():
+    return xyz_elliptic.axial_handshake()
+
+
+@api.post("/xyz/sign")
+async def xyz_sign(req: EncryptReq):
+    return xyz_elliptic.sign_payload(req.message)
+
+
+# ────────── NeuronBridge config ──────────
+@api.get("/neuronbridge/config")
+async def nb_config():
+    return neuron_bridge.load_config()
+
+
+@api.get("/neuronbridge/summary")
+async def nb_summary():
+    return neuron_bridge.summary()
+
+
+# ────────── Quantum Entropy ──────────
+@api.post("/quantum/entropy")
+async def quantum_entropy_report(req: EntropyReq):
+    return quantum_entropy.report(size=max(64, min(req.size, 16384)))
+
+
+# ────────── Unified pipeline ──────────
+@api.post("/pipeline/run-all")
+async def run_all():
+    """Connect every module end-to-end and return a unified report."""
+    t0 = time.time()
+    opt = QFXOptimizer(ENGINE)
+    opt.optimize(rounds=10)
+    sched = NNOXScheduler(ENGINE)
+    sched.route(jobs=6)
+    rt = ONYXRuntime(ENGINE)
+    rt.run(steps=5)
+    qint = qint_int2.compress_report(size=4096)
+    ztds = ztds_entropy.encrypt_demo("FXION-ONYX QUANTUM GENESIS PAYLOAD", "ZTDS-IQ-2026")
+    xyz = xyz_elliptic.axial_handshake()
+    qe = quantum_entropy.report(size=1024)
+    nb = neuron_bridge.summary()
+    elapsed = round(time.time() - t0, 3)
+    result = {
+        "elapsed_s": elapsed,
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "system_status": ENGINE.status(),
+        "qfx": opt.report(),
+        "nnox": sched.summary(),
+        "onyx": rt.report(),
+        "qint_int2": qint,
+        "ztds": ztds,
+        "xyz_elliptic": xyz,
+        "quantum_entropy": qe,
+        "neuron_bridge": nb,
+    }
+    await db.fxion_runs.insert_one({
+        "id": str(uuid.uuid4()), "event": "pipeline_run_all",
+        "elapsed_s": elapsed, "best": opt.best_quant(),
+        "ts": result["ts"],
+    })
+    return result
+
+
+@api.get("/pipeline/history")
+async def pipeline_history():
+    rows = await db.fxion_runs.find({}, {"_id": 0}).sort("ts", -1).to_list(50)
+    return {"history": rows}
+
+
+app.include_router(api)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -77,13 +236,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 @app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+async def shutdown():
+    mongo_client.close()

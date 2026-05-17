@@ -81,13 +81,15 @@ def _xorshift32_arr(state: np.ndarray) -> np.ndarray:
     return s
 
 
-def run(epochs: int = 256, capture_every: int = 0, include_fusion: bool = True) -> dict:
-    """Run OBTERON9 QLOGIC entropy-epoch solver across base quants ± fusion lanes."""
+def run(epochs: int = 256, capture_every: int = 0, include_fusion: bool = True,
+        primary_override: str = None) -> dict:
+    """Run OBTERON9 QLOGIC entropy-epoch solver with optional primary quant override."""
     epochs = max(8, min(epochs, T_MAX))
     quants = list(BASE_QUANTS)
     if include_fusion:
         quants.extend(_build_fusion_arms())
     QC = len(quants)
+    name_to_idx = {q.name: i for i, q in enumerate(quants)}
 
     rewards = np.zeros((LB, QC), dtype=np.float32)
     counts  = np.zeros((LB, QC), dtype=np.int32)
@@ -103,9 +105,15 @@ def run(epochs: int = 256, capture_every: int = 0, include_fusion: bool = True) 
 
     iq_eff_bonus = 0.08 * np.clip(1.0 - vram / 4.0, 0.0, 1.0) * is_iq
     iq2_xs_primary_bonus = np.zeros(QC, dtype=np.float32)
-    iq2_xs_primary_bonus[IQ2_XS_INDEX] = 0.10
-    fusion_explore_bonus = 0.05 * is_fusion         # extra exploration push for new arms
-    aug_prior = prior + iq_eff_bonus + iq2_xs_primary_bonus + fusion_explore_bonus
+    if not primary_override:
+        iq2_xs_primary_bonus[IQ2_XS_INDEX] = 0.10
+    fusion_explore_bonus = 0.05 * is_fusion
+    override_bonus = np.zeros(QC, dtype=np.float32)
+    override_idx = -1
+    if primary_override and primary_override in name_to_idx:
+        override_idx = name_to_idx[primary_override]
+        override_bonus[override_idx] = 0.18
+    aug_prior = prior + iq_eff_bonus + iq2_xs_primary_bonus + fusion_explore_bonus + override_bonus
 
     W_ACC, W_SPD, W_VRAM = 0.30, 0.45, 0.25
     MIN_EPOCHS_FOR_CONVERGE = max(32, epochs // 4)
@@ -150,6 +158,8 @@ def run(epochs: int = 256, capture_every: int = 0, include_fusion: bool = True) 
         r = (W_ACC * chosen_acc + W_SPD * spd + W_VRAM * vram_eff) * chosen_boost
         r = np.where(argmax == IQ2_XS_INDEX, r * 1.18, r)
         r = np.where(argmax == 5, r * 1.05, r)
+        if override_idx >= 0:
+            r = np.where(argmax == override_idx, r * 1.20, r)
 
         np.add.at(rewards, (np.arange(LB), argmax), r)
         np.add.at(counts,  (np.arange(LB), argmax), 1)
@@ -192,7 +202,8 @@ def run(epochs: int = 256, capture_every: int = 0, include_fusion: bool = True) 
     return {
         "kernel": "FXION PCIe v2.1 (CUDA-mirror) · UCB1 + OBTERON9 QLOGIC + Fusion lanes",
         "topology": f"{LAYERS}L × {BRIDGES}B = {LB} bridges",
-        "primary_quant": "IQ2_XS",
+        "primary_quant": primary_override or "IQ2_XS",
+        "primary_override_applied": bool(primary_override),
         "n_arms": QC,
         "n_base_arms": len(BASE_QUANTS),
         "n_fusion_arms": QC - len(BASE_QUANTS),
@@ -209,6 +220,7 @@ def run(epochs: int = 256, capture_every: int = 0, include_fusion: bool = True) 
         "best_quant": quants[best_idx].name,
         "best_is_fusion": quants[best_idx].is_fusion,
         "iq2_xs_share": round(iq2_share, 4),
+        "iq4_nl_share": round(float(votes[name_to_idx.get("IQ4_NL", 0)] / LB) if "IQ4_NL" in name_to_idx else 0.0, 4),
         "fusion_share": round(fusion_share, 4),
         "global_entropy_final": round(float(final_entropy.sum()), 4),
         "global_entropy_initial": round(total_h_history[0], 4) if total_h_history else None,

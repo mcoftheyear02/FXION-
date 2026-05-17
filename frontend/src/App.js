@@ -97,6 +97,7 @@ const CommandCenter = () => {
   const [pcieSrc, setPcieSrc] = useState(null);
   const [showSrc, setShowSrc] = useState(false);
   const [fusion, setFusion] = useState(null);
+  const [cotrain, setCotrain] = useState(null);
   const [live, setLive] = useState(false);
   const [liveTick, setLiveTick] = useState(null);
   const [lastSync, setLastSync] = useState(null);
@@ -218,6 +219,14 @@ const CommandCenter = () => {
       const r = await axios.get(`${API}/qfusion/merge`);
       setFusion(r.data);
     } finally { set("fuse", 0); }
+  };
+
+  const runCotrain = async () => {
+    set("cotrain", 1);
+    try {
+      const r = await axios.post(`${API}/cotrain/run`, { epochs: 40, sync_every: 8, weight_dim: 256, apply_pcie: true });
+      setCotrain(r.data);
+    } finally { set("cotrain", 0); }
   };
 
   // auto-load fusion on mount
@@ -850,6 +859,139 @@ const CommandCenter = () => {
             </>
           ) : (
             <p className="text-xs text-zinc-600 mt-4">Computing merged lanes…</p>
+          )}
+        </Panel>
+
+        {/* CO-TRAINING AVX512 ↔ CORTEX A72 with IQ quants */}
+        <Panel
+          icon={ShieldCheck}
+          title="Co-Training · AVX512 ↔ Cortex A72"
+          subtitle="IQ2_XS · IQ4_XS · IQ4_NL · HyperLearn + XOR peer-exchange · PCIe override IQ4_NL"
+          testid="cotrain-panel"
+        >
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-[11px] text-zinc-500 font-mono">
+              Two peers train in parallel; every 8 epochs they swap INT8 XOR-mixed weights. Then PCIe solver runs with <span className="text-amber-300">IQ4_NL primary override</span> on 144 bridges.
+            </p>
+            <Btn onClick={runCotrain} busy={busy.cotrain} testid="run-cotrain-btn">Run 40 epochs · sync 8 · apply PCIe</Btn>
+          </div>
+
+          {cotrain ? (
+            <div className="space-y-4">
+              {/* Top: peer comparison */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className={`border p-3 ${cotrain.winner_peer === "AVX512" ? "border-emerald-400/60 bg-emerald-500/5" : "border-zinc-800"}`}>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-[11px] uppercase tracking-widest text-emerald-300 font-mono">AVX512 PEER</span>
+                    {cotrain.winner_peer === "AVX512" && <span className="text-[9px] text-amber-300">★ WINNER</span>}
+                  </div>
+                  <div className="text-[10px] font-mono text-zinc-500 mb-2">primary {cotrain.peer_quant_map.AVX512.primary} · secondary {cotrain.peer_quant_map.AVX512.secondary}</div>
+                  <Stat label="Successes" value={`${cotrain.successes.AVX512}/${cotrain.epochs}`}/>
+                  <Stat label="Avg reward" value={cotrain.avg_reward.AVX512}/>
+                  <Stat label="Final reward" value={cotrain.final_reward.AVX512}/>
+                </div>
+
+                <div className="border border-zinc-800 p-3">
+                  <div className="text-[11px] uppercase tracking-widest text-amber-300 font-mono mb-2">Sync · XOR Exchanges</div>
+                  <div className="h-[200px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart>
+                        <CartesianGrid stroke="#18181b" strokeDasharray="2 2"/>
+                        <XAxis dataKey="epoch" type="number" domain={[0, cotrain.epochs - 1]} tick={{ fill: "#71717a", fontSize: 9 }}/>
+                        <YAxis domain={[0, 1]} tick={{ fill: "#71717a", fontSize: 9 }}/>
+                        <Tooltip contentStyle={{ background: "#09090b", border: "1px solid #27272a", fontSize: 11 }}/>
+                        <Line type="monotone" dataKey="reward" data={cotrain.avx_trace} stroke="#10b981" strokeWidth={2} dot={false} name="AVX512"/>
+                        <Line type="monotone" dataKey="reward" data={cotrain.arm_trace} stroke="#06b6d4" strokeWidth={2} strokeDasharray="4 2" dot={false} name="Cortex A72"/>
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="grid grid-cols-2 mt-2 text-[10px] font-mono">
+                    <div><span className="text-zinc-500">gap</span> <span className="text-zinc-200 ml-2">{cotrain.convergence_gap}</span></div>
+                    <div className="text-right"><span className="text-zinc-500">coherent</span> <span className={cotrain.convergence_coherent ? "text-emerald-400 ml-2" : "text-amber-400 ml-2"}>{cotrain.convergence_coherent ? "✓" : "—"}</span></div>
+                  </div>
+                </div>
+
+                <div className={`border p-3 ${cotrain.winner_peer === "CORTEX_A72" ? "border-cyan-400/60 bg-cyan-500/5" : "border-zinc-800"}`}>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-[11px] uppercase tracking-widest text-cyan-300 font-mono">CORTEX A72 PEER</span>
+                    {cotrain.winner_peer === "CORTEX_A72" && <span className="text-[9px] text-amber-300">★ WINNER</span>}
+                  </div>
+                  <div className="text-[10px] font-mono text-zinc-500 mb-2">primary {cotrain.peer_quant_map.CORTEX_A72.primary} · secondary {cotrain.peer_quant_map.CORTEX_A72.secondary}</div>
+                  <Stat label="Successes" value={`${cotrain.successes.CORTEX_A72}/${cotrain.epochs}`}/>
+                  <Stat label="Avg reward" value={cotrain.avg_reward.CORTEX_A72}/>
+                  <Stat label="Final reward" value={cotrain.final_reward.CORTEX_A72}/>
+                </div>
+              </div>
+
+              {/* Sync events */}
+              <div className="border border-zinc-900 p-3">
+                <div className="text-[11px] uppercase tracking-widest text-amber-300 font-mono mb-2">
+                  XOR Peer-Sync Events ({cotrain.xor_exchanges})
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {cotrain.syncs.map((s, i) => (
+                    <div key={i} className="border border-zinc-900 p-2 text-[10px] font-mono">
+                      <div className="flex justify-between text-zinc-500">
+                        <span>epoch {s.epoch}</span>
+                        <span className="text-fuchsia-400">⇄</span>
+                      </div>
+                      <div className="text-emerald-400">AVX: {s.avx_reward}</div>
+                      <div className="text-cyan-400">ARM: {s.arm_reward}</div>
+                      <div className="text-zinc-600 break-all">fp: {s.mix_fingerprint}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* PCIe IQ4_NL override result */}
+              {cotrain.pcie_solver && (
+                <div className="border-2 border-amber-400/40 bg-amber-500/5 p-4">
+                  <div className="flex justify-between mb-3">
+                    <span className="text-[11px] uppercase tracking-widest text-amber-300 font-mono">
+                      ▶ PCIe Solver applied · primary override = {cotrain.pcie_solver.primary_quant_override}
+                    </span>
+                    <span className="text-[10px] text-zinc-500 font-mono">{cotrain.pcie_solver.topology} · {cotrain.pcie_solver.wall_ms} ms</span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px] font-mono">
+                    <div>
+                      <div className="text-zinc-500 text-[10px]">winner</div>
+                      <div className="text-2xl text-amber-300" style={{color: QUANT_COLORS[cotrain.pcie_solver.best_quant] || "#fbbf24"}}>
+                        {cotrain.pcie_solver.best_quant}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-zinc-500 text-[10px]">IQ4_NL share</div>
+                      <div className="text-2xl text-blue-400">{(cotrain.pcie_solver.iq4_nl_share*100).toFixed(1)}%</div>
+                    </div>
+                    <div>
+                      <div className="text-zinc-500 text-[10px]">IQ2_XS share</div>
+                      <div className="text-2xl text-emerald-400">{(cotrain.pcie_solver.iq2_xs_share*100).toFixed(1)}%</div>
+                    </div>
+                    <div>
+                      <div className="text-zinc-500 text-[10px]">final entropy</div>
+                      <div className="text-2xl text-zinc-200">{cotrain.pcie_solver.global_entropy_final}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 h-[120px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={Object.entries(cotrain.pcie_solver.votes).map(([q,c])=>({quant:q, count:c}))}>
+                        <CartesianGrid stroke="#18181b" strokeDasharray="2 2"/>
+                        <XAxis dataKey="quant" tick={{ fill: "#a1a1aa", fontSize: 9, fontFamily: "monospace" }}/>
+                        <YAxis tick={{ fill: "#71717a", fontSize: 9 }}/>
+                        <Tooltip contentStyle={{ background: "#09090b", border: "1px solid #27272a", fontSize: 11 }}/>
+                        <Bar dataKey="count" radius={[2,2,0,0]}>
+                          {Object.entries(cotrain.pcie_solver.votes).map(([q],i)=>(
+                            <Cell key={i} fill={QUANT_COLORS[q] || "#a1a1aa"}/>
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-600 mt-4">Click to run dual-peer co-training. AVX512 targets IQ4_NL, Cortex A72 targets IQ2_XS; they XOR-sync every 8 epochs. PCIe solver then runs with IQ4_NL primary override.</p>
           )}
         </Panel>
 

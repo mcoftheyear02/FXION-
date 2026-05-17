@@ -26,6 +26,7 @@ from fxion import qint_levels, qi_neuronbridge, deep_learn_sdk, elliptic_seismo,
 from fxion import hyperlearn
 from fxion import fxion_pcie_simulator
 from fxion import qfusion
+from fxion import cotrain
 
 # MongoDB
 mongo_url = os.environ['MONGO_URL']
@@ -436,6 +437,8 @@ async def hyperlearn_compare(req: HyperCompareReq):
 class PcieReq(BaseModel):
     epochs: int = 256
     capture_every: int = 8
+    include_fusion: bool = True
+    primary_override: Optional[str] = None
 
 
 @api.post("/pcie/run")
@@ -443,6 +446,8 @@ async def pcie_run(req: PcieReq):
     return fxion_pcie_simulator.run(
         epochs=max(8, min(req.epochs, 2048)),
         capture_every=max(0, min(req.capture_every, 64)),
+        include_fusion=req.include_fusion,
+        primary_override=req.primary_override,
     )
 
 
@@ -467,6 +472,27 @@ async def pcie_source():
 # ────────── QUANT FUSION · merge lanes ──────────
 @api.get("/qfusion/merge")
 async def qfusion_merge():
+    return qfusion.all_merges()
+
+# ────────── CO-TRAINING · AVX512 ↔ Cortex A72 + PCIe IQ4_NL primary ──────────
+class CotrainReq(BaseModel):
+    epochs: int = 40
+    sync_every: int = 8
+    weight_dim: int = 256
+    seed: int = 42
+    apply_pcie: bool = True
+
+
+@api.post("/cotrain/run")
+async def cotrain_run(req: CotrainReq):
+    return cotrain.run(
+        epochs=max(8, min(req.epochs, 200)),
+        sync_every=max(2, min(req.sync_every, req.epochs)),
+        weight_dim=max(32, min(req.weight_dim, 4096)),
+        seed=req.seed,
+        apply_pcie=req.apply_pcie,
+    )
+
     return qfusion.all_merges()
 
 

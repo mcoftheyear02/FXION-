@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IQ4_NL // CYBERPUNK DASHBOARD</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap');
+
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-pink: #ff00ff;
+            --neon-yellow: #ffee00;
+            --dark-bg: #050505;
+            --panel-bg: rgba(10, 15, 20, 0.85);
+            --grid-color: rgba(0, 243, 255, 0.1);
+            --alert-red: #ff2a2a;
+            --success-green: #00ff41;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            scrollbar-width: thin;
+            scrollbar-color: var(--neon-cyan) var(--dark-bg);
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            background-image: 
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 40px 40px;
+            color: var(--neon-cyan);
+            font-family: 'Rajdhani', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Scanline Effect */
+        body::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            border-bottom: 2px solid var(--neon-cyan);
+            background: var(--panel-bg);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
+        }
+
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            font-weight: 900;
+            text-shadow: 0 0 10px var(--neon-cyan);
+            letter-spacing: 2px;
+        }
+
+        .logo span { color: var(--neon-pink); }
+
+        .status-bar {
+            display: flex;
+            gap: 20px;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--success-green);
+            box-shadow: 0 0 10px var(--success-green);
+            animation: pulse 2s infinite;
+        }
+
+        /* Main Grid */
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 300px 1fr 350px;
+            grid-template-rows: 2fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--neon-cyan);
+            border-radius: 5px;
+            padding: 20px;
+            position: relative;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
+            clip-path: polygon(
+                0 0, 
+                100% 0, 
+                100% calc(100% - 20px), 
+                calc(100% - 20px) 100%, 
+                0 100%
+            );
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 20px;
+            height: 20px;
+            border-top: 2px solid var(--neon-pink);
+            border-left: 2px solid var(--neon-pink);
+        }
+
+        .panel h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: var(--neon-yellow);
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255, 238, 0, 0.3);
+            padding-bottom: 5px;
+        }
+
+        /* Left Column: System Stats */
+        .stats-panel {
+            grid-row: 1 / 3;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .stat-box {
+            background: rgba(0, 243, 255, 0.05);
+            padding: 15px;
+            border-left: 3px solid var(--neon-cyan);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 0 5px var(--neon-cyan);
+        }
+
+        .stat-unit {
+            font-size: 0.8rem;
+            color: var(--neon-pink);
+        }
+
+        /* Center: Visualizers */
+        .viz-panel {
+            grid-column: 2;
+            grid-row: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        canvas#seismograph {
+            width: 100%;
+            height: 100%;
+        }
+
+        .overlay-text {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-family: 'Orbitron';
+            font-size: 0.8rem;
+            color: var(--neon-pink);
+            text-align: right;
+        }
+
+        /* Bottom Center: Neural Log */
+        .log-panel {
+            grid-column: 2;
+            grid-row: 2;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            overflow-y: auto;
+            color: var(--success-green);
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px dashed rgba(0, 255, 65, 0.2);
+            padding-bottom: 2px;
+        }
+
+        .log-time { color: var(--neon-yellow); margin-right: 10px; }
+        .log-warn { color: var(--alert-red); }
+        .log-info { color: var(--neon-cyan); }
+
+        /* Right Column: Network & Security */
+        .net-panel {
+            grid-column: 3;
+            grid-row: 1 / 3;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .network-viz {
+            height: 200px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--neon-pink);
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .node {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: var(--neon-cyan);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--neon-cyan);
+        }
+
+        .link {
+            position: absolute;
+            height: 2px;
+            background: var(--neon-pink);
+            transform-origin: 0 0;
+            opacity: 0.6;
+        }
+
+        .security-meter {
+            height: 30px;
+            background: #111;
+            border: 1px solid var(--neon-yellow);
+            position: relative;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .security-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--alert-red), var(--neon-yellow), var(--success-green));
+            width: 100%;
+            transition: width 0.2s;
+            box-shadow: 0 0 15px var(--success-green);
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% { opacity: 0.5; box-shadow: 0 0 5px var(--success-green); }
+            50% { opacity: 1; box-shadow: 0 0 20px var(--success-green); }
+            100% { opacity: 0.5; box-shadow: 0 0 5px var(--success-green); }
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0) }
+            20% { transform: translate(-2px, 2px) }
+            40% { transform: translate(-2px, -2px) }
+            60% { transform: translate(2px, 2px) }
+            80% { transform: translate(2px, -2px) }
+            100% { transform: translate(0) }
+        }
+
+        .glitch {
+            animation: glitch 0.2s infinite;
+            display: inline-block;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            main {
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: auto;
+            }
+            .stats-panel { grid-row: 1; grid-column: 1; }
+            .viz-panel { grid-row: 2; grid-column: 1 / 3; height: 300px; }
+            .log-panel { grid-row: 3; grid-column: 1 / 3; height: 200px; }
+            .net-panel { grid-row: 4; grid-column: 1 / 3; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">IQ4_<span>NL</span> // GENESIS</div>
+    <div class="status-bar">
+        <div class="status-item">
+            <div class="indicator"></div>
+            <span>CORTEX A-72: ONLINE</span>
+        </div>
+        <div class="status-item">
+            <span style="color: var(--neon-yellow)">LATENCY:</span>
+            <span id="latency-display">0.00008 ms</span>
+        </div>
+        <div class="status-item">
+            <span style="color: var(--neon-pink)">THROUGHPUT:</span>
+            <span id="throughput-display">4.85M OPS</span>
+        </div>
+    </div>
+</header>
+
+<main>
+    <!-- Left: Stats -->
+    <div class="panel stats-panel">
+        <h2>System Metrics</h2>
+        
+        <div class="stat-box">
+            <div class="stat-label">HMAC-OBERON SIGS/SEC</div>
+            <div class="stat-value" id="hmac-speed">2,100,432</div>
+            <div class="stat-unit">VERIFIED</div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">NEUTRINO SCANS/SEC</div>
+            <div class="stat-value" id="neutrino-speed">12,405,112</div>
+            <div class="stat-unit">PHANTOM LAYERS</div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">FIBONACCI EXPANSION</div>
+            <div class="stat-value" id="fib-ratio">1.6180339</div>
+            <div class="stat-unit">GOLDEN RATIO</div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">ELLIPITICAL COORDS</div>
+            <div class="stat-value" id="coord-rate">1,371,992</div>
+            <div class="stat-unit">RA/DEC MAPPED</div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">AUTO-TRAIN WEIGHTS</div>
+            <div class="stat-value" id="train-rate">3,475,001</div>
+            <div class="stat-unit">UPDATES/SEC</div>
+        </div>
+    </div>
+
+    <!-- Center: Seismograph -->
+    <div class="panel viz-panel">
+        <h2 style="position:absolute; top:20px; left:20px; z-index:20;">MILKY WAY SEISMOGRAPH</h2>
+        <canvas id="seismograph"></canvas>
+        <div class="overlay-text">
+            MODE: ELLIPTICAL WAVE<br>
+            SOURCE: GALACTIC CORE<br>
+            STATUS: <span class="glitch">QUANTUM ENTANGLED</span>
+        </div>
+    </div>
+
+    <!-- Bottom: Logs -->
+    <div class="panel log-panel" id="log-container">
+        <!-- Logs injected via JS -->
+    </div>
+
+    <!-- Right: Network & Security -->
+    <div class="panel net-panel">
+        <h2>Network Topology</h2>
+        
+        <div class="network-viz" id="network-canvas">
+            <!-- Nodes injected via JS -->
+        </div>
+
+        <div style="margin-top: 20px;">
+            <h2>Security Integrity</h2>
+            <div style="display:flex; justify-content:space-between; font-size:0.9rem;">
+                <span>X.509 CERT</span>
+                <span style="color:var(--success-green)">VALID</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-top:5px;">
+                <span>HMAC-SHA3-512</span>
+                <span style="color:var(--success-green)">ACTIVE</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-top:5px;">
+                <span>NEUTRINO PHANTOM</span>
+                <span style="color:var(--success-green)">3 LAYERS</span>
+            </div>
+            
+            <div class="security-meter">
+                <div class="security-fill" id="security-fill"></div>
+            </div>
+            <div style="text-align:right; font-size:0.8rem; margin-top:5px; color:var(--neon-yellow);">
+                INTEGRITY: 100%
+            </div>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <h2>Lane Status</h2>
+            <div style="margin-bottom:10px;">
+                <div style="font-size:0.8rem; color:var(--neon-cyan);">NET LANE (External)</div>
+                <div style="height:4px; background:#333; margin-top:2px;">
+                    <div style="height:100%; width:85%; background:var(--neon-cyan); box-shadow:0 0 10px var(--neon-cyan);"></div>
+                </div>
+            </div>
+            <div>
+                <div style="font-size:0.8rem; color:var(--neon-pink);">LAN LANE (Direct)</div>
+                <div style="height:4px; background:#333; margin-top:2px;">
+                    <div style="height:100%; width:98%; background:var(--neon-pink); box-shadow:0 0 10px var(--neon-pink);"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    // --- Seismograph Visualization ---
+    const canvas = document.getElementById('seismograph');
+    const ctx = canvas.getContext('2d');
+    
+    function resizeCanvas() {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    let time = 0;
+    const waves = [
+        { freq: 0.05, amp: 30, color: '#00f3ff', offset: 0 },
+        { freq: 0.12, amp: 20, color: '#ff00ff', offset: 2 },
+        { freq: 0.03, amp: 50, color: '#ffee00', offset: 4 }
+    ];
+
+    function drawSeismograph() {
+        ctx.fillStyle = 'rgba(10, 15, 20, 0.3)'; // Trail effect
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const centerY = canvas.height / 2;
+
+        waves.forEach(wave => {
+            ctx.beginPath();
+            ctx.strokeStyle = wave.color;
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = wave.color;
+
+            for (let x = 0; x < canvas.width; x++) {
+                // Combine sine waves with random noise for "seismic" feel
+                const y = Math.sin((x * wave.freq) + time + wave.offset) * wave.amp 
+                        + Math.sin((x * wave.freq * 2.5) + time) * (wave.amp * 0.5)
+                        + (Math.random() - 0.5) * 5;
+                
+                if (x === 0) ctx.moveTo(x, centerY + y);
+                else ctx.lineTo(x, centerY + y);
+            }
+            ctx.stroke();
+        });
+
+        time += 0.1;
+        requestAnimationFrame(drawSeismograph);
+    }
+    drawSeismograph();
+
+    // --- Network Topology Animation ---
+    const netContainer = document.getElementById('network-canvas');
+    const nodes = [];
+    const nodeCount = 12;
+
+    // Create nodes
+    for(let i=0; i<nodeCount; i++) {
+        const node = document.createElement('div');
+        node.className = 'node';
+        node.style.left = Math.random() * 80 + 10 + '%';
+        node.style.top = Math.random() * 80 + 10 + '%';
+        netContainer.appendChild(node);
+        nodes.push({
+            element: node,
+            x: parseFloat(node.style.left),
+            y: parseFloat(node.style.top),
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: (Math.random() - 0.5) * 0.5
+        });
+    }
+
+    function animateNetwork() {
+        // Update positions
+        nodes.forEach(node => {
+            node.x += node.vx;
+            node.y += node.vy;
+
+            // Bounce off walls
+            if(node.x < 0 || node.x > 90) node.vx *= -1;
+            if(node.y < 0 || node.y > 90) node.vy *= -1;
+
+            node.element.style.left = node.x + '%';
+            node.element.style.top = node.y + '%';
+        });
+
+        // Draw connections (simple lines via CSS gradients would be complex, using SVG overlay concept or just pulsing nodes)
+        // For simplicity in this demo, we just pulse the nodes based on proximity to center
+        const centerX = 50, centerY = 50;
+        nodes.forEach(node => {
+            const dist = Math.sqrt(Math.pow(node.x - centerX, 2) + Math.pow(node.y - centerY, 2));
+            const opacity = Math.max(0.3, 1 - dist / 50);
+            node.element.style.opacity = opacity;
+            node.element.style.boxShadow = `0 0 ${10 * opacity}px var(--neon-cyan)`;
+        });
+
+        requestAnimationFrame(animateNetwork);
+    }
+    animateNetwork();
+
+    // --- Data Simulation ---
+    function updateStats() {
+        // Randomize numbers slightly to simulate live data
+        const baseHmac = 2100000;
+        const baseNeutrino = 12400000;
+        const baseCoord = 1371000;
+        const baseTrain = 3475000;
+
+        document.getElementById('hmac-speed').innerText = (baseHmac + Math.floor(Math.random() * 500)).toLocaleString();
+        document.getElementById('neutrino-speed').innerText = (baseNeutrino + Math.floor(Math.random() * 1000)).toLocaleString();
+        document.getElementById('coord-rate').innerText = (baseCoord + Math.floor(Math.random() * 200)).toLocaleString();
+        document.getElementById('train-rate').innerText = (baseTrain + Math.floor(Math.random() * 300)).toLocaleString();
+        
+        // Latency jitter
+        const latency = (0.00008 + Math.random() * 0.00002).toFixed(6);
+        document.getElementById('latency-display').innerText = latency + ' ms';
+
+        // Security bar fluctuation
+        const integrity = 98 + Math.random() * 2;
+        document.getElementById('security-fill').style.width = integrity + '%';
+    }
+
+    setInterval(updateStats, 100);
+
+    // --- Logger ---
+    const logContainer = document.getElementById('log-container');
+    const messages = [
+        { type: 'info', msg: 'HMAC Signature Verified: Packet ID #99281' },
+        { type: 'info', msg: 'Neutrino Scan: Sector 7 Clear' },
+        { type: 'info', msg: 'Cortex A-72: Elliptical Map Updated' },
+        { type: 'warn', msg: 'Minor Fluctuation in LAN Lane (Corrected)' },
+        { type: 'info', msg: 'Auto-Training: Weights Optimized (+0.04%)' },
+        { type: 'info', msg: 'Phantom Layer 2: No Anomalies Detected' },
+        { type: 'info', msg: 'Fibonacci Sequence Synced: 144th Iteration' },
+        { type: 'info', msg: 'X.509 Certificate Renewal: Valid' },
+        { type: 'warn', msg: 'External Ping Detected (Blocked by Lone Road)' },
+        { type: 'info', msg: 'Quantum Entanglement Stable' }
+    ];
+
+    function addLog() {
+        const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+        const now = new Date();
+        const timeStr = now.toISOString().split('T')[1].slice(0, -1);
+        
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        div.innerHTML = `<span class="log-time">[${timeStr}]</span><span class="${randomMsg.type === 'warn' ? 'log-warn' : 'log-info'}">${randomMsg.msg}</span>`;
+        
+        logContainer.prepend(div);
+        
+        if(logContainer.children.length > 20) {
+            logContainer.removeChild(logContainer.lastChild);
+        }
+    }
+
+    setInterval(addLog, 400);
+
+</script>
+</body>
+</html>

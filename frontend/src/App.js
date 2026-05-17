@@ -19,6 +19,10 @@ const QUANT_COLORS = {
   Q2_K: "#ef4444", Q3_K: "#f97316", Q4_K_M: "#eab308",
   Q5_K_M: "#84cc16", Q6_K: "#22d3ee", Q8_0: "#a78bfa",
   IQ2_XS: "#10b981", IQ3_M: "#14b8a6", IQ4_XS: "#06b6d4", IQ4_NL: "#3b82f6",
+  // fusion lanes
+  INT_K_ALL: "#fbbf24",
+  IQ_XS_ALL: "#f472b6",
+  M_XSM_NL_HYBRID: "#e879f9",
 };
 
 function Panel({ icon: Icon, title, subtitle, children, testid }) {
@@ -852,8 +856,8 @@ const CommandCenter = () => {
         {/* PCIe CUDA Engine v2 */}
         <Panel
           icon={Cpu}
-          title="FXION PCIe Engine v2 · CUDA Kernel"
-          subtitle="12L × 12B · UCB1 √2 · IQ2_XS primary · OBTERON9 QLOGIC entropy-epoch solver"
+          title="FXION PCIe Engine v2.1 · CUDA Kernel + Fusion"
+          subtitle="12L × 12B · UCB1 √2 · 10 base + 3 fusion arms · IQ2_XS primary · OBTERON9 QLOGIC"
           testid="pcie-panel"
         >
           <div className="flex justify-between items-center mb-3">
@@ -880,7 +884,10 @@ const CommandCenter = () => {
                 <Stat label="Wall time" value={`${pcie.wall_ms} ms`}/>
                 <Stat label="Throughput" value={`${pcie.throughput_bridges_per_s.toLocaleString()} bridges/s`}/>
                 <Stat label="Best (vote)" value={pcie.best_quant}/>
+                <Stat label="Best is fusion" value={pcie.best_is_fusion ? "✓ fusion lane" : "base quant"}/>
                 <Stat label="IQ2_XS share" value={`${(pcie.iq2_xs_share*100).toFixed(1)}%`}/>
+                <Stat label="Fusion share" value={`${(pcie.fusion_share*100).toFixed(1)}%`}/>
+                <Stat label="N arms" value={`${pcie.n_base_arms} + ${pcie.n_fusion_arms} fusion`}/>
               </div>
 
               {/* Entropy curve */}
@@ -935,8 +942,11 @@ const CommandCenter = () => {
                           {l.backend.includes('GPU') ? "GPU" : "CPU"}
                         </span>
                       </div>
-                      <div className="text-zinc-200" style={{color: QUANT_COLORS[l.best] || "#fbbf24"}}>{l.best}</div>
+                      <div className="text-zinc-200" style={{color: QUANT_COLORS[l.best] || "#fbbf24"}}>
+                        {l.best}{l.best_is_fusion && <span className="ml-1 text-fuchsia-400">⋆</span>}
+                      </div>
                       <div className="text-zinc-600">IQ2_XS: {l.iq2_xs_count}/12</div>
+                      <div className="text-fuchsia-400/80">fusion: {l.fusion_count}/12</div>
                       <div className="text-zinc-600">H̄: {l.entropy_mean}</div>
                     </div>
                   ))}

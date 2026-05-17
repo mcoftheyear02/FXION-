@@ -2,16 +2,19 @@
 FXION PCIe Simulator — pure-Python mirror of fxion_pcie_engine.cu
 12 layers × 12 bridges · UCB1 (C=√2) · IQ2_XS primary · OBTERON9 QLOGIC entropy-epoch solver.
 
+v2.1: now includes 3 MERGED fusion lanes (INT_K_ALL, IQ_XS_ALL, M_XSM_NL_HYBRID)
+as additional UCB1 arms → 13 total candidates per bridge.
+
 Functionally equivalent to the CUDA kernel:
   k1: ucb1_score_kernel
   k2: obteron9_qlogic_kernel (softmax + Shannon entropy)
   k3: update_reward_kernel
-Plus the host driver that loops until ΣH < EPSILON·LB or t reaches max epochs.
 """
 import math
 import time
 import numpy as np
 from dataclasses import dataclass
+from fxion import qfusion
 
 
 LAYERS = 12
@@ -30,12 +33,15 @@ class Q:
     base_tps: float
     prior: float
     is_iq: bool
+    is_fusion: bool = False
+    boost: float = 1.0           # extra reward multiplier when this arm is pulled
 
 
-QUANTS = [
+# 10 base quants
+BASE_QUANTS = [
     Q("Q2_K",   0.710, 1.20, 194.1, 0.00, False),
     Q("Q3_K",   0.820, 1.60, 178.6, 0.00, False),
-    Q("Q4_K_M", 0.900, 2.10, 162.3, 0.00, False),
+    Q("Q4_K_M", 0.900, 2.10, 162.3, 0.05, False),
     Q("Q5_K_M", 0.940, 2.60, 151.8, 0.00, False),
     Q("Q6_K",   0.970, 3.10, 141.2, 0.00, False),
     Q("Q8_0",   0.991, 3.82, 128.4, 0.12, False),
@@ -44,8 +50,27 @@ QUANTS = [
     Q("IQ4_XS", 0.950, 1.85, 171.6, 0.10, True),
     Q("IQ4_NL", 0.975, 2.05, 166.2, 0.11, True),
 ]
-QC = len(QUANTS)
 IQ2_XS_INDEX = 6
+
+
+def _build_fusion_arms():
+    """Build merged fusion lanes as additional bandit arms."""
+    merged = qfusion.all_merges()["merged_lanes"]
+    arms = []
+    for name in ("INT_K_ALL", "IQ_XS_ALL", "M_XSM_NL_HYBRID"):
+        f = merged[name]
+        is_iq = "IQ" in f["family_signature"]
+        arms.append(Q(
+            name=name,
+            accuracy=f["fused_accuracy"],
+            vram_gb=f["fused_vram_gb_mean"],
+            base_tps=f["fused_tps_harmonic"],
+            prior=f["summed_prior"],
+            is_iq=is_iq,
+            is_fusion=True,
+            boost=f["boost_factor"],     # ← propagated multiplicative reward boost
+        ))
+    return arms
 
 
 def _xorshift32_arr(state: np.ndarray) -> np.ndarray:
@@ -56,28 +81,34 @@ def _xorshift32_arr(state: np.ndarray) -> np.ndarray:
     return s
 
 
-def run(epochs: int = 256, capture_every: int = 0) -> dict:
-    """Run OBTERON9 QLOGIC entropy-epoch solver. capture_every>0 saves trace."""
+def run(epochs: int = 256, capture_every: int = 0, include_fusion: bool = True) -> dict:
+    """Run OBTERON9 QLOGIC entropy-epoch solver across base quants ± fusion lanes."""
     epochs = max(8, min(epochs, T_MAX))
+    quants = list(BASE_QUANTS)
+    if include_fusion:
+        quants.extend(_build_fusion_arms())
+    QC = len(quants)
+
     rewards = np.zeros((LB, QC), dtype=np.float32)
     counts  = np.zeros((LB, QC), dtype=np.int32)
-    # structured RNG state per (L*B)
     rng_state = np.array([((i * 0x9E3779B1) | 1) & 0xFFFFFFFF for i in range(LB)], dtype=np.uint32)
 
-    acc   = np.array([q.accuracy  for q in QUANTS], dtype=np.float32)
-    vram  = np.array([q.vram_gb   for q in QUANTS], dtype=np.float32)
-    btps  = np.array([q.base_tps  for q in QUANTS], dtype=np.float32)
-    prior = np.array([q.prior     for q in QUANTS], dtype=np.float32)
-    is_iq = np.array([1.0 if q.is_iq else 0.0 for q in QUANTS], dtype=np.float32)
-    # IQ family gets a stronger efficiency bonus; IQ2_XS (primary) gets an explicit prior bump.
+    acc   = np.array([q.accuracy  for q in quants], dtype=np.float32)
+    vram  = np.array([q.vram_gb   for q in quants], dtype=np.float32)
+    btps  = np.array([q.base_tps  for q in quants], dtype=np.float32)
+    prior = np.array([q.prior     for q in quants], dtype=np.float32)
+    is_iq = np.array([1.0 if q.is_iq else 0.0 for q in quants], dtype=np.float32)
+    is_fusion = np.array([1.0 if q.is_fusion else 0.0 for q in quants], dtype=np.float32)
+    boost_arr = np.array([q.boost for q in quants], dtype=np.float32)
+
     iq_eff_bonus = 0.08 * np.clip(1.0 - vram / 4.0, 0.0, 1.0) * is_iq
     iq2_xs_primary_bonus = np.zeros(QC, dtype=np.float32)
-    iq2_xs_primary_bonus[IQ2_XS_INDEX] = 0.10  # primary lane
-    aug_prior = prior + iq_eff_bonus + iq2_xs_primary_bonus  # (QC,)
+    iq2_xs_primary_bonus[IQ2_XS_INDEX] = 0.10
+    fusion_explore_bonus = 0.05 * is_fusion         # extra exploration push for new arms
+    aug_prior = prior + iq_eff_bonus + iq2_xs_primary_bonus + fusion_explore_bonus
 
-    # NeuronBridge config calls for high TPS / low VRAM => bias reward toward speed+vram.
     W_ACC, W_SPD, W_VRAM = 0.30, 0.45, 0.25
-    MIN_EPOCHS_FOR_CONVERGE = max(32, epochs // 4)  # forced exploration window
+    MIN_EPOCHS_FOR_CONVERGE = max(32, epochs // 4)
 
     t_start = time.time()
     trace = []
@@ -93,7 +124,7 @@ def run(epochs: int = 256, capture_every: int = 0) -> dict:
             explore = np.where(n > 0,
                                UCB1_C * np.sqrt(math.log(t + 1.0) / np.maximum(n, 1)),
                                1e6)
-        scores = exploit + explore + aug_prior[None, :]    # (LB, QC)
+        scores = exploit + explore + aug_prior[None, :]
 
         # K2: OBTERON9 QLOGIC — softmax + Shannon entropy
         m = scores.max(axis=1, keepdims=True)
@@ -104,20 +135,21 @@ def run(epochs: int = 256, capture_every: int = 0) -> dict:
         total_h = float(entropy_per_bridge.sum())
         total_h_history.append(total_h)
 
-        argmax = scores.argmax(axis=1)  # (LB,)
+        argmax = scores.argmax(axis=1)
 
-        # K3: update rewards (vectorized)
+        # K3: update rewards
         rng_state = _xorshift32_arr(rng_state)
         jitter = ((rng_state.astype(np.int64) & 0xFFFF).astype(np.float32) - 32768.0) / 32768.0 * 0.03
         chosen_acc  = acc[argmax]
         chosen_vram = vram[argmax]
         chosen_btps = btps[argmax]
+        chosen_boost = boost_arr[argmax]
         tps = chosen_btps * (1.0 + jitter)
         spd = np.minimum(tps / 220.0, 1.0)
         vram_eff = np.clip(1.0 - chosen_vram / 4.0, 0.0, 1.0)
-        r = W_ACC * chosen_acc + W_SPD * spd + W_VRAM * vram_eff
-        r = np.where(argmax == IQ2_XS_INDEX, r * 1.18, r)   # IQ2_XS primary multiplier
-        r = np.where(argmax == 5, r * 1.05, r)              # Q8_0 accuracy lane (smaller boost)
+        r = (W_ACC * chosen_acc + W_SPD * spd + W_VRAM * vram_eff) * chosen_boost
+        r = np.where(argmax == IQ2_XS_INDEX, r * 1.18, r)
+        r = np.where(argmax == 5, r * 1.05, r)
 
         np.add.at(rewards, (np.arange(LB), argmax), r)
         np.add.at(counts,  (np.arange(LB), argmax), 1)
@@ -131,17 +163,16 @@ def run(epochs: int = 256, capture_every: int = 0) -> dict:
 
         final_argmax = argmax
         final_entropy = entropy_per_bridge
-        # Only converge after forced exploration window
         if t >= MIN_EPOCHS_FOR_CONVERGE and total_h < EPSILON * LB:
             break
 
     wall_ms = (time.time() - t_start) * 1000.0
-    # Per-quant vote
     votes = np.bincount(final_argmax, minlength=QC).tolist()
     best_idx = int(np.argmax(votes))
     iq2_share = float(votes[IQ2_XS_INDEX] / LB)
+    fusion_indices = [i for i, q in enumerate(quants) if q.is_fusion]
+    fusion_share = sum(votes[i] for i in fusion_indices) / LB
 
-    # Per-layer aggregation
     per_layer = []
     arg2d = final_argmax.reshape(LAYERS, BRIDGES)
     ent2d = final_entropy.reshape(LAYERS, BRIDGES)
@@ -150,16 +181,22 @@ def run(epochs: int = 256, capture_every: int = 0) -> dict:
         per_layer.append({
             "layer": L + 1,
             "backend": "CPU·AVX512" if L < 6 else "GPU·CUDA_FP16",
-            "best": QUANTS[int(np.argmax(bridge_votes))].name,
+            "best": quants[int(np.argmax(bridge_votes))].name,
+            "best_is_fusion": quants[int(np.argmax(bridge_votes))].is_fusion,
             "iq2_xs_count": int(bridge_votes[IQ2_XS_INDEX]),
+            "fusion_count": sum(int(bridge_votes[i]) for i in fusion_indices),
             "entropy_mean": round(float(ent2d[L].mean()), 4),
-            "votes": {QUANTS[i].name: int(c) for i, c in enumerate(bridge_votes) if c},
+            "votes": {quants[i].name: int(c) for i, c in enumerate(bridge_votes) if c},
         })
 
     return {
-        "kernel": "FXION PCIe v2 (CUDA-mirror) · UCB1 + OBTERON9 QLOGIC",
+        "kernel": "FXION PCIe v2.1 (CUDA-mirror) · UCB1 + OBTERON9 QLOGIC + Fusion lanes",
         "topology": f"{LAYERS}L × {BRIDGES}B = {LB} bridges",
         "primary_quant": "IQ2_XS",
+        "n_arms": QC,
+        "n_base_arms": len(BASE_QUANTS),
+        "n_fusion_arms": QC - len(BASE_QUANTS),
+        "fusion_included": include_fusion,
         "ucb1_c": UCB1_C,
         "epsilon": EPSILON,
         "epochs_target": epochs,
@@ -167,9 +204,12 @@ def run(epochs: int = 256, capture_every: int = 0) -> dict:
         "converged": len(total_h_history) < epochs,
         "wall_ms": round(wall_ms, 3),
         "throughput_bridges_per_s": round(LB * len(total_h_history) / max(wall_ms / 1000, 1e-6), 0),
-        "votes": {QUANTS[i].name: int(v) for i, v in enumerate(votes) if v},
-        "best_quant": QUANTS[best_idx].name,
+        "votes": {quants[i].name: int(v) for i, v in enumerate(votes) if v},
+        "fusion_votes": {quants[i].name: int(votes[i]) for i in fusion_indices if votes[i]},
+        "best_quant": quants[best_idx].name,
+        "best_is_fusion": quants[best_idx].is_fusion,
         "iq2_xs_share": round(iq2_share, 4),
+        "fusion_share": round(fusion_share, 4),
         "global_entropy_final": round(float(final_entropy.sum()), 4),
         "global_entropy_initial": round(total_h_history[0], 4) if total_h_history else None,
         "entropy_curve": [round(x, 4) for x in total_h_history[::max(1, len(total_h_history) // 64)]],

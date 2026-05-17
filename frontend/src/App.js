@@ -99,6 +99,10 @@ const CommandCenter = () => {
   const [fusion, setFusion] = useState(null);
   const [cotrain, setCotrain] = useState(null);
   const [hyperPrimary, setHyperPrimary] = useState(null);
+  const [hprimStart, setHprimStart] = useState(6);
+  const [hprimEnd, setHprimEnd] = useState(12);
+  const [hprimQuant, setHprimQuant] = useState("IQ2_XS");
+  const [hprimEpochs, setHprimEpochs] = useState(30);
   const [live, setLive] = useState(false);
   const [liveTick, setLiveTick] = useState(null);
   const [lastSync, setLastSync] = useState(null);
@@ -233,8 +237,10 @@ const CommandCenter = () => {
   const runHyperPrimary = async () => {
     set("hprim", 1);
     try {
+      const start = Math.min(hprimStart, hprimEnd);
+      const end = Math.max(hprimStart, hprimEnd);
       const r = await axios.post(`${API}/hyperlearn/primary`, {
-        start_layer: 6, end_layer: 12, quant: "IQ2_XS", epochs: 30, weight_dim: 128
+        start_layer: start, end_layer: end, quant: hprimQuant, epochs: hprimEpochs, weight_dim: 128
       });
       setHyperPrimary(r.data);
     } finally { set("hprim", 0); }
@@ -912,11 +918,70 @@ const CommandCenter = () => {
           subtitle="L06 → L12 · IQ2_XS · 84 bridges · XOR-on-success mask 0x5A"
           testid="hyper-primary-panel"
         >
-          <div className="flex justify-between items-center mb-3">
-            <p className="text-[11px] text-zinc-500 font-mono">
-              HyperLearn promoted to PRIMARY on 7 layers (L06 CPU·AVX512 + L07–L12 GPU·CUDA_FP16), 12 bridges each, with <span className="text-emerald-300">IQ2_XS</span> as active quant.
+          <div className="flex justify-between items-center mb-3 gap-3 flex-wrap">
+            <p className="text-[11px] text-zinc-500 font-mono flex-1 min-w-[200px]">
+              HyperLearn promoted to PRIMARY on selected layer-range with chosen quant. XOR-on-success mask 0x5A · mask damp 5%.
             </p>
-            <Btn onClick={runHyperPrimary} busy={busy.hprim} testid="run-hyper-primary-btn">Run 30 epochs · 84 bridges</Btn>
+            <Btn onClick={runHyperPrimary} busy={busy.hprim} testid="run-hyper-primary-btn">Run HyperLearn Primary</Btn>
+          </div>
+
+          {/* Interactive controls */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-3 border border-zinc-900 bg-zinc-950/60">
+            <div>
+              <label className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono">Start Layer · L{String(hprimStart).padStart(2,'0')}</label>
+              <input
+                data-testid="hprim-start-slider"
+                type="range" min={1} max={12} value={hprimStart}
+                onChange={e => setHprimStart(parseInt(e.target.value))}
+                className="w-full mt-2 accent-amber-400"
+              />
+              <div className="flex justify-between text-[9px] text-zinc-600 font-mono"><span>L01</span><span>L12</span></div>
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono">End Layer · L{String(hprimEnd).padStart(2,'0')}</label>
+              <input
+                data-testid="hprim-end-slider"
+                type="range" min={1} max={12} value={hprimEnd}
+                onChange={e => setHprimEnd(parseInt(e.target.value))}
+                className="w-full mt-2 accent-amber-400"
+              />
+              <div className="flex justify-between text-[9px] text-zinc-600 font-mono"><span>L01</span><span>L12</span></div>
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono">Quant</label>
+              <select
+                data-testid="hprim-quant-select"
+                value={hprimQuant}
+                onChange={e => setHprimQuant(e.target.value)}
+                className="w-full mt-2 bg-zinc-950 border border-zinc-800 text-zinc-200 text-[11px] font-mono px-2 py-1.5 focus:border-amber-400 focus:outline-none"
+              >
+                {Object.keys(QUANT_COLORS).filter(q => !q.includes("_ALL") && !q.includes("_HYBRID")).map(q => (
+                  <option key={q} value={q}>{q}</option>
+                ))}
+              </select>
+              <div className="text-[9px] text-zinc-600 font-mono mt-1">10 base quants · K-family + IQ-family</div>
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono">Epochs · {hprimEpochs}</label>
+              <input
+                data-testid="hprim-epochs-slider"
+                type="range" min={8} max={100} step={2} value={hprimEpochs}
+                onChange={e => setHprimEpochs(parseInt(e.target.value))}
+                className="w-full mt-2 accent-amber-400"
+              />
+              <div className="flex justify-between text-[9px] text-zinc-600 font-mono"><span>8</span><span>100</span></div>
+            </div>
+            <div className="md:col-span-4 flex items-center justify-between border-t border-zinc-900 pt-2 text-[10px] font-mono">
+              <span className="text-zinc-500">Selection:</span>
+              <span className="text-amber-300">
+                L{String(Math.min(hprimStart,hprimEnd)).padStart(2,'0')} → L{String(Math.max(hprimStart,hprimEnd)).padStart(2,'0')}
+                <span className="text-zinc-600"> · {Math.abs(hprimEnd - hprimStart) + 1} layers</span>
+                <span className="text-zinc-600"> · {(Math.abs(hprimEnd - hprimStart) + 1) * 12} bridges</span>
+              </span>
+              <span style={{color: QUANT_COLORS[hprimQuant]}}>{hprimQuant}</span>
+              <span className="text-zinc-500">{hprimEpochs} epochs</span>
+              <span className="text-zinc-500">→ <span className="text-fuchsia-400">{(Math.abs(hprimEnd - hprimStart) + 1) * 12 * hprimEpochs}</span> bandit pulls</span>
+            </div>
           </div>
 
           {hyperPrimary ? (

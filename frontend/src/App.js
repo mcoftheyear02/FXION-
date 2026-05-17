@@ -4,12 +4,13 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import axios from "axios";
 import {
   Activity, Cpu, Zap, Shield, Lock, Atom, GitBranch, Database,
-  Play, RefreshCw, Network, Binary, KeySquare, Sparkles
+  Play, RefreshCw, Network, Binary, KeySquare, Sparkles,
+  Layers, Brain, Waves, Package, ShieldCheck, Gauge
 } from "lucide-react";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
-  LineChart, Line, CartesianGrid,
+  LineChart, Line, CartesianGrid, ScatterChart, Scatter, ZAxis,
 } from "recharts";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -79,6 +80,17 @@ const CommandCenter = () => {
   const [ztds, setZtds] = useState(null);
   const [xyz, setXyz] = useState(null);
   const [qent, setQent] = useState(null);
+  const [qintBench, setQintBench] = useState(null);
+  const [qiLayers, setQiLayers] = useState(null);
+  const [deep, setDeep] = useState(null);
+  const [seismo, setSeismo] = useState(null);
+  const [hardR, setHardR] = useState(null);
+  const [ztdsDeep, setZtdsDeep] = useState(null);
+  const [live, setLive] = useState(false);
+  const [liveTick, setLiveTick] = useState(null);
+  const [lastSync, setLastSync] = useState(null);
+  const [snapshots, setSnapshots] = useState([]);
+  const [toast, setToast] = useState(null);
   const [busy, setBusy] = useState({});
   const [pipeline, setPipeline] = useState(null);
   const [history, setHistory] = useState([]);
@@ -88,20 +100,69 @@ const CommandCenter = () => {
 
   const loadStatic = async () => {
     try {
-      const [s, m, p, b, h] = await Promise.all([
+      const [s, m, p, b, h, sn] = await Promise.all([
         axios.get(`${API}/system/status`),
         axios.get(`${API}/manifest`),
         axios.get(`${API}/qfx/profiles`),
         axios.get(`${API}/neuronbridge/summary`),
         axios.get(`${API}/pipeline/history`),
+        axios.get(`${API}/snapshot/list`),
       ]);
       setStatus(s.data); setManifest(m.data);
       setProfiles(p.data.profiles); setBridge(b.data);
       setHistory(h.data.history || []);
+      setSnapshots(sn.data.snapshots || []);
     } catch (e) { console.error(e); }
   };
 
   useEffect(() => { loadStatic(); }, []);
+
+  // LIVE polling
+  useEffect(() => {
+    if (!live) return;
+    let mounted = true;
+    const tick = async () => {
+      try {
+        const r = await axios.get(`${API}/live/tick`);
+        if (!mounted) return;
+        setLiveTick(r.data);
+        setLastSync(Date.now());
+        // also refresh light status
+        setStatus(prev => prev ? { ...prev, best_quant: r.data.best_quant, history_len: r.data.tick.iter + 1 } : prev);
+      } catch (e) {/* ignore */}
+    };
+    tick();
+    const id = setInterval(tick, 3000);
+    return () => { mounted = false; clearInterval(id); };
+  }, [live]);
+
+  const saveSnapshot = async () => {
+    set("snap", 1);
+    try {
+      const r = await axios.post(`${API}/snapshot/save`);
+      setToast(`📸 Snapshot saved · ${r.data.snapshot_id.substring(0,8)} · ${r.data.modules} modules`);
+      const list = await axios.get(`${API}/snapshot/list`);
+      setSnapshots(list.data.snapshots || []);
+      setTimeout(() => setToast(null), 4000);
+    } finally { set("snap", 0); }
+  };
+
+  const loadSnapshot = async (sid) => {
+    set("snap", 1);
+    try {
+      const r = await axios.get(`${API}/snapshot/${sid}`);
+      const p = r.data.payload;
+      setPipeline(p);
+      setQfx(p.qfx); setNnox({ summary: p.nnox, routes: [] });
+      setOnyx({ report: p.onyx, metrics: [] });
+      setQint(p.qint_int2); setZtds(p.ztds); setXyz(p.xyz_elliptic); setQent(p.quantum_entropy);
+      setQintBench(p.qint_bench);
+      setSeismo(p.elliptic_seismo ? { ...p.elliptic_seismo, x: [], y: [] } : null);
+      setHardR(p.hard_compress);
+      setToast(`✓ Snapshot ${sid.substring(0,8)} loaded`);
+      setTimeout(() => setToast(null), 3000);
+    } finally { set("snap", 0); }
+  };
 
   const runQfx = async () => { set("qfx", 1); try { const r = await axios.post(`${API}/qfx/optimize`, { rounds: 16 }); setQfx(r.data); } finally { set("qfx", 0); } };
   const runNnox = async () => { set("nnox", 1); try { const r = await axios.post(`${API}/nnox/route`, { jobs: 12 }); setNnox(r.data); } finally { set("nnox", 0); } };
@@ -111,6 +172,13 @@ const CommandCenter = () => {
   const runXyz = async () => { set("xyz", 1); try { const r = await axios.get(`${API}/xyz/handshake`); setXyz(r.data); } finally { set("xyz", 0); } };
   const runQent = async () => { set("qent", 1); try { const r = await axios.post(`${API}/quantum/entropy`, { size: 2048 }); setQent(r.data); } finally { set("qent", 0); } };
 
+  const runQintBench = async () => { set("qbench", 1); try { const r = await axios.post(`${API}/qint/bench-all`, { size: 8192 }); setQintBench(r.data); } finally { set("qbench", 0); } };
+  const runQI = async () => { set("qi", 1); try { const r = await axios.get(`${API}/qi/neuronbridge`); setQiLayers(r.data); } finally { set("qi", 0); } };
+  const runDeep = async () => { set("deep", 1); try { const r = await axios.post(`${API}/deep/forward`, { nodes: 16, steps: 8 }); setDeep(r.data); } finally { set("deep", 0); } };
+  const runSeismo = async () => { set("seismo", 1); try { const r = await axios.post(`${API}/elliptic/seismo`, { a: 3, b: 2, n: 200 }); setSeismo(r.data); } finally { set("seismo", 0); } };
+  const runHard = async () => { set("hard", 1); try { const r = await axios.post(`${API}/hard/roundtrip`, {}); setHardR(r.data); } finally { set("hard", 0); } };
+  const runZtdsDeep = async () => { set("ztdsd", 1); try { const r = await axios.post(`${API}/ztds/deep`, { message, rounds: 4 }); setZtdsDeep(r.data); } finally { set("ztdsd", 0); } };
+
   const runAll = async () => {
     set("all", 1);
     try {
@@ -119,8 +187,18 @@ const CommandCenter = () => {
       setQfx(r.data.qfx); setNnox({ summary: r.data.nnox, routes: [] });
       setOnyx({ report: r.data.onyx, metrics: [] }); setQint(r.data.qint_int2);
       setZtds(r.data.ztds); setXyz(r.data.xyz_elliptic); setQent(r.data.quantum_entropy);
+      // v2 panels
+      setQintBench(r.data.qint_bench);
+      setQiLayers(r.data.qi_neuronbridge ? { ...r.data.qi_neuronbridge, layers: r.data.qi_neuronbridge.layers_sample || [] } : null);
+      setDeep(r.data.deep_learn_sdk ? { ...r.data.deep_learn_sdk, steps: r.data.deep_learn_sdk.steps_sample || [] } : null);
+      setSeismo(r.data.elliptic_seismo ? { ...r.data.elliptic_seismo, x: [], y: [] } : null);
+      setHardR(r.data.hard_compress);
       const h = await axios.get(`${API}/pipeline/history`); setHistory(h.data.history || []);
       const s = await axios.get(`${API}/system/status`); setStatus(s.data);
+      // pull QI full layers + seismo wave detail asynchronously (for live charts)
+      axios.get(`${API}/qi/neuronbridge`).then(x => setQiLayers(x.data)).catch(() => {});
+      axios.post(`${API}/elliptic/seismo`, { a: 3, b: 2, n: 200 }).then(x => setSeismo(x.data)).catch(() => {});
+      axios.post(`${API}/deep/forward`, { nodes: 16, steps: 8 }).then(x => setDeep(x.data)).catch(() => {});
     } finally { set("all", 0); }
   };
 
@@ -150,6 +228,11 @@ const CommandCenter = () => {
     { name: "xyz_elliptic",   ok: !!xyz,      icon: Shield },
     { name: "quantum_entropy",ok: !!qent,     icon: Atom },
     { name: "neuron_bridge",  ok: !!bridge,   icon: GitBranch },
+    { name: "qi_neuronbridge",ok: !!qiLayers, icon: Layers },
+    { name: "deep_learn_sdk", ok: !!deep,     icon: Brain },
+    { name: "elliptic_seismo",ok: !!seismo,   icon: Waves },
+    { name: "hard_compress",  ok: !!hardR,    icon: Package },
+    { name: "qint_levels",    ok: !!qintBench,icon: Gauge },
   ];
   const connectedCount = modulesConnected.filter(m => m.ok).length;
 
@@ -183,6 +266,19 @@ const CommandCenter = () => {
               <div className="text-zinc-500 uppercase tracking-wider">Modules Online</div>
               <div className="text-emerald-300 text-sm">{connectedCount} / {modulesConnected.length}</div>
             </div>
+            <button
+              data-testid="live-toggle"
+              onClick={() => setLive(l => !l)}
+              className={`px-3 py-1.5 text-[11px] uppercase tracking-[0.2em] font-mono border transition-all ${
+                live ? "border-emerald-400 text-emerald-300 bg-emerald-500/10" : "border-zinc-700 text-zinc-500 hover:border-zinc-500"
+              }`}
+            >
+              <span className={`inline-block w-1.5 h-1.5 mr-2 rounded-full ${live ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"}`}/>
+              {live ? "LIVE" : "Live Off"}
+            </button>
+            <Btn onClick={saveSnapshot} busy={busy.snap} testid="snapshot-btn" variant="ghost">
+              📸 Snapshot
+            </Btn>
             <Btn onClick={runAll} busy={busy.all} testid="run-all-btn">
               <Play className="w-3 h-3 inline mr-2"/>Run Full Stack
             </Btn>
@@ -206,6 +302,32 @@ const CommandCenter = () => {
       </header>
 
       <main className="relative max-w-[1600px] mx-auto px-6 py-8 z-10">
+        {/* TOAST */}
+        {toast && (
+          <div data-testid="toast" className="fixed top-24 right-6 z-40 border border-emerald-400/60 bg-emerald-500/10 text-emerald-200 px-4 py-2 text-xs font-mono backdrop-blur-md">
+            {toast}
+          </div>
+        )}
+
+        {/* LIVE STRIP */}
+        {live && liveTick && (
+          <div data-testid="live-strip" className="mb-4 border border-emerald-500/30 bg-emerald-500/5 px-4 py-2 flex items-center justify-between text-[11px] font-mono">
+            <div className="flex items-center gap-4 text-emerald-300">
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-emerald-400 animate-pulse rounded-full"/>
+                LIVE
+              </span>
+              <span className="text-zinc-500">iter</span><span>{liveTick.tick.iter}</span>
+              <span className="text-zinc-500">quant</span><span style={{color: QUANT_COLORS[liveTick.tick.quant] || "#fbbf24"}}>{liveTick.tick.quant}</span>
+              <span className="text-zinc-500">tps</span><span>{liveTick.tick.tps}</span>
+              <span className="text-zinc-500">reward</span><span>{liveTick.tick.reward}</span>
+              <span className="text-zinc-500">best</span><span className="text-amber-300">{liveTick.best_quant}</span>
+              <span className="text-zinc-500">ψ-coh</span><span>{liveTick.qi_avg_coherence}</span>
+              <span className="text-zinc-500">active layers</span><span>{liveTick.qi_active}/12</span>
+            </div>
+            <span className="text-zinc-500">last sync: {lastSync ? Math.max(0, Math.floor((Date.now()-lastSync)/1000)) + "s ago" : "—"}</span>
+          </div>
+        )}
         {/* TOP ROW: System + NeuronBridge + Manifest */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
           <Panel icon={Cpu} title="FXION System" subtitle="UCB1 · Q8 Augmented Policy" testid="system-panel">
@@ -434,9 +556,199 @@ const CommandCenter = () => {
           </Panel>
         </div>
 
+        {/* ───────────── V2 EXPERIMENTAL SECTION ───────────── */}
+        <div className="mt-8 mb-4 flex items-center gap-3">
+          <div className="h-px flex-1 bg-zinc-900"/>
+          <span className="text-[10px] tracking-[0.4em] uppercase text-amber-400/70 font-mono">V2 · Experimental Layer</span>
+          <div className="h-px flex-1 bg-zinc-900"/>
+        </div>
+
+        {/* QINT levels + QI NeuronBridge */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          <Panel icon={Gauge} title="QINT 2 · 4 · 8 Bench" subtitle="compress · decompress · speed" testid="qint-bench-panel">
+            <Btn onClick={runQintBench} busy={busy.qbench} testid="run-qbench-btn">Benchmark all levels (8k weights)</Btn>
+            {qintBench ? (
+              <div className="mt-4">
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={Object.entries(qintBench).map(([k,v])=>({level:k, ratio:v.compression_ratio, enc:v.encode_ms, dec:v.decode_ms, acc:v.estimated_accuracy*100}))}>
+                      <CartesianGrid stroke="#18181b" strokeDasharray="2 2"/>
+                      <XAxis dataKey="level" tick={{ fill: "#a1a1aa", fontSize: 10, fontFamily: "monospace" }}/>
+                      <YAxis tick={{ fill: "#71717a", fontSize: 9, fontFamily: "monospace" }}/>
+                      <Tooltip contentStyle={{ background: "#09090b", border: "1px solid #27272a", fontSize: 11 }}/>
+                      <Bar dataKey="ratio" fill="#fbbf24" name="Ratio ×"/>
+                      <Bar dataKey="acc" fill="#10b981" name="Acc %"/>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-3 text-[10px] font-mono">
+                  {Object.entries(qintBench).map(([k,v]) => (
+                    <div key={k} className="border border-zinc-900 p-2">
+                      <div className="text-amber-300 mb-1">{k}</div>
+                      <div className="text-zinc-500">enc {v.encode_ms}ms</div>
+                      <div className="text-zinc-500">dec {v.decode_ms}ms</div>
+                      <div className="text-zinc-400">{v.compression_ratio}× · {(v.estimated_accuracy*100).toFixed(1)}%</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : <p className="text-xs text-zinc-600 mt-4">Click to run QINT2/4/8 benchmark.</p>}
+          </Panel>
+
+          <Panel icon={Layers} title="QI · NeuronBridge Layer Active" subtitle="Per-layer entropy · ψ coherence" testid="qi-panel">
+            <Btn onClick={runQI} busy={busy.qi} testid="run-qi-btn">Sample all 12 layers</Btn>
+            {qiLayers ? (
+              <div className="mt-3">
+                <div className="grid grid-cols-2 gap-2 mb-3 text-[11px]">
+                  <Stat label="Active" value={`${qiLayers.active_layers}/${qiLayers.layers_total}`}/>
+                  <Stat label="Avg ψ-Coherence" value={qiLayers.avg_coherence}/>
+                  <Stat label="Split" value={qiLayers.split_mode}/>
+                  <Stat label="Coherent" value={qiLayers.coherent ? "✓" : "✗"}/>
+                </div>
+                <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                  {qiLayers.layers.map(l => (
+                    <div key={l.layer} className="flex items-center gap-2 text-[10px] font-mono">
+                      <span className="text-zinc-500 w-6">L{l.layer.toString().padStart(2,'0')}</span>
+                      <span className={`w-20 ${l.backend.includes('GPU')?'text-cyan-400':'text-amber-300'}`}>{l.backend}</span>
+                      <div className="flex-1 h-1 bg-zinc-900 relative">
+                        <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-400 to-emerald-400"
+                          style={{ width: `${l.coherence*100}%` }}/>
+                      </div>
+                      <span className="text-zinc-400 w-12 text-right">{l.coherence}</span>
+                      <span className="text-zinc-600 w-12 text-right">H={l.entropy_bits}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : <p className="text-xs text-zinc-600 mt-4">Click to map 12 QI layers.</p>}
+          </Panel>
+        </div>
+
+        {/* Deep SDK + Seismograph */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          <Panel icon={Brain} title="Deep-Learn SDK · Dynamic Entropic Graph" subtitle="Forward pass · spectral · GELU" testid="deep-panel">
+            <Btn onClick={runDeep} busy={busy.deep} testid="run-deep-btn">Forward 8 steps · 16 nodes</Btn>
+            {deep ? (
+              <div className="mt-3">
+                <div className="grid grid-cols-2 gap-2 text-[11px] mb-3">
+                  <Stat label="Nodes" value={deep.graph_nodes}/>
+                  <Stat label="Edges" value={deep.edges_nonzero}/>
+                  <Stat label="Spectral Radius" value={deep.spectral_radius}/>
+                  <Stat label="Avg Entropy" value={`${deep.avg_entropy_bits} bpb`}/>
+                </div>
+                <div className="h-[180px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={deep.steps}>
+                      <CartesianGrid stroke="#18181b" strokeDasharray="2 2"/>
+                      <XAxis dataKey="step" tick={{ fill: "#71717a", fontSize: 9 }}/>
+                      <YAxis tick={{ fill: "#71717a", fontSize: 9 }}/>
+                      <Tooltip contentStyle={{ background: "#09090b", border: "1px solid #27272a", fontSize: 11 }}/>
+                      <Line type="monotone" dataKey="entropy_bits" stroke="#a78bfa" strokeWidth={2} dot={{r:2}} name="Entropy"/>
+                      <Line type="monotone" dataKey="l2_norm" stroke="#06b6d4" strokeWidth={1.5} dot={false} name="L2"/>
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            ) : <p className="text-xs text-zinc-600 mt-4">Run forward pass.</p>}
+          </Panel>
+
+          <Panel icon={Waves} title="Elliptic Seismograph Wave" subtitle="Lissajous · SHA3 signature" testid="seismo-panel">
+            <Btn onClick={runSeismo} busy={busy.seismo} testid="run-seismo-btn">Generate 200-sample wave (a=3, b=2)</Btn>
+            {seismo ? (
+              <div className="mt-3">
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart>
+                      <CartesianGrid stroke="#18181b" strokeDasharray="2 2"/>
+                      <XAxis type="number" dataKey="x" tick={{ fill: "#71717a", fontSize: 9 }} domain={[-1.2, 1.2]}/>
+                      <YAxis type="number" dataKey="y" tick={{ fill: "#71717a", fontSize: 9 }} domain={[-1.2, 1.2]}/>
+                      <Tooltip contentStyle={{ background: "#09090b", border: "1px solid #27272a", fontSize: 11 }}/>
+                      <Scatter data={seismo.x.map((vx,i)=>({x:vx,y:seismo.y[i]}))} fill="#fbbf24" line={{ stroke: '#fbbf24', strokeWidth: 1 }} shape="circle"/>
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-2 text-[11px]">
+                  <Stat label="Energy" value={seismo.energy}/>
+                  <Stat label="ZC X / Y" value={`${seismo.zero_crossings_x} / ${seismo.zero_crossings_y}`}/>
+                </div>
+                <div className="mt-2 text-[9px] font-mono text-zinc-500 break-all border-t border-zinc-900 pt-2">
+                  sig sha3: {seismo.signature_sha3_256.substring(0,48)}…
+                </div>
+              </div>
+            ) : <p className="text-xs text-zinc-600 mt-4">Generate elliptic waveform.</p>}
+          </Panel>
+        </div>
+
+        {/* Hard Compression + ZTDS Deep */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          <Panel icon={Package} title="HARD Compression · XOR Prefetch Hash Chain" subtitle="RLE → XOR → DEFLATE → BLAKE2b chain" testid="hard-panel">
+            <Btn onClick={runHard} busy={busy.hard} testid="run-hard-btn">Roundtrip compress + tamper hash</Btn>
+            {hardR ? (
+              <div className="mt-3">
+                <Stat label="Original" value={`${hardR.original_bytes} B`}/>
+                <Stat label="RLE" value={`${hardR.rle_bytes} B`}/>
+                <Stat label="XOR Prefetch" value={`${hardR.xored_bytes} B`}/>
+                <Stat label="DEFLATE" value={`${hardR.compressed_bytes} B`}/>
+                <Stat label="Ratio" value={`${hardR.compression_ratio}×`}/>
+                <Stat label="Hash Chain Blocks" value={hardR.hash_chain_blocks}/>
+                <Stat label="Roundtrip" value={hardR.roundtrip_match ? "✓ match" : "✗ FAIL"}/>
+                <div className="mt-2 text-[9px] font-mono text-zinc-500 break-all border-t border-zinc-900 pt-2">
+                  blake2b root: {hardR.hash_chain_root?.substring(0, 48)}…
+                </div>
+              </div>
+            ) : <p className="text-xs text-zinc-600 mt-4">Run hard compression roundtrip.</p>}
+          </Panel>
+
+          <Panel icon={ShieldCheck} title="ZTDS · Deep Mode" subtitle="Multi-round rotating-key encrypt" testid="ztdsdeep-panel">
+            <Btn onClick={runZtdsDeep} busy={busy.ztdsd} testid="run-ztdsdeep-btn">Deep encrypt × 4 rounds (current msg)</Btn>
+            {ztdsDeep ? (
+              <div className="mt-3">
+                <Stat label="Rounds" value={ztdsDeep.rounds}/>
+                <Stat label="Match" value={ztdsDeep.match ? "✓" : "✗"}/>
+                <Stat label="PT Entropy" value={`${ztdsDeep.plaintext_entropy_bits} bpb`}/>
+                <Stat label="CT Entropy" value={`${ztdsDeep.ciphertext_entropy_bits} bpb`}/>
+                <div className="mt-2 text-[10px] font-mono text-zinc-500">
+                  key chain: {ztdsDeep.key_chain_preview?.join(" → ")}
+                </div>
+                <div className="mt-2 text-[9px] font-mono text-zinc-500 break-all border-t border-zinc-900 pt-2 max-h-16 overflow-y-auto">
+                  {ztdsDeep.ciphertext_hex}
+                </div>
+              </div>
+            ) : <p className="text-xs text-zinc-600 mt-4">Run deep ZTDS encryption.</p>}
+          </Panel>
+        </div>
+
+        {/* SNAPSHOTS */}
+        <Panel icon={KeySquare} title="Reel Snapshots · MongoDB persisted" subtitle={`${snapshots.length} captured · click to restore dashboard state`} testid="snapshots-panel">
+          {snapshots.length === 0 ? (
+            <p className="text-xs text-zinc-600">No snapshots yet. Press 📸 SNAPSHOT in the header to capture all 14 modules.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              {snapshots.map(s => (
+                <button
+                  key={s.id}
+                  data-testid={`snapshot-${s.id.substring(0,8)}`}
+                  onClick={() => loadSnapshot(s.id)}
+                  className="text-left border border-zinc-800 hover:border-amber-400/60 bg-zinc-950/50 p-3 transition-all"
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-amber-300 text-[11px] font-mono">{s.id.substring(0, 8)}</span>
+                    <span className="text-zinc-500 text-[10px]">{(s.ts || "").substring(11, 19)} UTC</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] font-mono text-zinc-500">
+                    <span>best <span className="text-zinc-300">{s.best_quant}</span></span>
+                    <span>{s.modules_count} modules</span>
+                    <span>{s.elapsed_s}s</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </Panel>
+
         <footer className="mt-10 pt-6 border-t border-zinc-900 text-[10px] tracking-[0.3em] uppercase text-zinc-600 font-mono flex justify-between">
           <span>FXION-ONYX · OMNITECH Q8 · NeuronBridge 8.712 · Quantum Genesis</span>
-          <span>Modules: {connectedCount}/{modulesConnected.length} online · UCB1 · Q8_0 prior +0.12</span>
+          <span>Modules: {connectedCount}/{modulesConnected.length} online · {live ? "LIVE" : "static"} · UCB1 · Q8_0 prior +0.12</span>
         </footer>
       </main>
     </div>

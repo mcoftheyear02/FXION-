@@ -1,0 +1,306 @@
+#!/usr/bin/env bash
+
+# ============================================================
+# FXION QINT RUNTIME vNEXT
+# Intelligent Multi-Layer Runtime
+# ============================================================
+
+set -e
+
+# ============================================================
+# PATHS
+# ============================================================
+
+ROOT="./FXION_QINT"
+
+LAYER_DIR="$ROOT/layers"
+CACHE_DIR="$ROOT/cache"
+HOT_DIR="$ROOT/hot"
+COLD_DIR="$ROOT/cold"
+VRAM_DIR="$ROOT/vram"
+STREAM_DIR="$ROOT/stream"
+BUILD_DIR="$ROOT/build"
+LOG_DIR="$ROOT/logs"
+AI_DIR="$ROOT/ai"
+
+mkdir -p \
+    "$LAYER_DIR" \
+    "$CACHE_DIR" \
+    "$HOT_DIR" \
+    "$COLD_DIR" \
+    "$VRAM_DIR" \
+    "$STREAM_DIR" \
+    "$BUILD_DIR" \
+    "$LOG_DIR" \
+    "$AI_DIR"
+
+# ============================================================
+# SYSTEM DETECTION
+# ============================================================
+
+CPU_THREADS=$(nproc)
+
+GPU_AVAILABLE=0
+
+if command -v nvidia-smi >/dev/null 2>&1; then
+    GPU_AVAILABLE=1
+fi
+
+# ============================================================
+# CONFIG
+# ============================================================
+
+HOT_ENTROPY=5.0
+WARM_ENTROPY=7.0
+
+# ============================================================
+# ENTROPY ANALYZER
+# ============================================================
+
+entropy_scan() {
+
+    local FILE="$1"
+
+    ent "$FILE" | grep Entropy | awk '{print $3}'
+}
+
+# ============================================================
+# AI SCHEDULER
+# ============================================================
+
+ai_scheduler() {
+
+    local FILE="$1"
+    local ENTROPY="$2"
+
+    if (( $(echo "$ENTROPY < $HOT_ENTROPY" | bc -l) )); then
+
+        echo "HOT"
+
+    elif (( $(echo "$ENTROPY < $WARM_ENTROPY" | bc -l) )); then
+
+        echo "WARM"
+
+    else
+
+        echo "COLD"
+
+    fi
+}
+
+# ============================================================
+# DYNAMIC COMPRESSION
+# ============================================================
+
+dynamic_compress() {
+
+    local FILE="$1"
+    local CLASS="$2"
+
+    local OUTPUT
+
+    case "$CLASS" in
+
+        HOT)
+
+            OUTPUT="$HOT_DIR/$(basename $FILE).q0"
+
+            echo "[QINT] HOT compression"
+
+            zstd \
+                -3 \
+                -T0 \
+                --fast \
+                "$FILE" \
+                -o "$OUTPUT"
+        ;;
+
+        WARM)
+
+            OUTPUT="$CACHE_DIR/$(basename $FILE).q1"
+
+            echo "[QINT] WARM compression"
+
+            zstd \
+                -10 \
+                -T0 \
+                "$FILE" \
+                -o "$OUTPUT"
+        ;;
+
+        COLD)
+
+            OUTPUT="$COLD_DIR/$(basename $FILE).q2"
+
+            echo "[QINT] COLD ultra compression"
+
+            zstd \
+                -22 \
+                --ultra \
+                -T0 \
+                "$FILE" \
+                -o "$OUTPUT"
+        ;;
+
+    esac
+}
+
+# ============================================================
+# HOT BLOCK PRELOADER
+# ============================================================
+
+preload_hot_blocks() {
+
+    echo "[RUNTIME] preload hot blocks"
+
+    find "$HOT_DIR" -type f | while read f; do
+
+        cat "$f" > /dev/null
+
+    done
+}
+
+# ============================================================
+# ON-DEMAND DECOMPRESSION
+# ============================================================
+
+decompress_on_demand() {
+
+    local FILE="$1"
+
+    echo "[RUNTIME] on-demand decompress"
+
+    zstd -d "$FILE" -c > /dev/null
+}
+
+# ============================================================
+# VRAM CACHE SYSTEM
+# ============================================================
+
+vram_cache() {
+
+    if [ "$GPU_AVAILABLE" -eq 1 ]; then
+
+        echo "[GPU] caching hot blocks"
+
+        find "$HOT_DIR" -type f | head -5 | while read f; do
+
+            cp "$f" "$VRAM_DIR/" 2>/dev/null || true
+
+        done
+
+    fi
+}
+
+# ============================================================
+# STREAMING ENGINE
+# ============================================================
+
+stream_engine() {
+
+    echo "[STREAM] neural streaming runtime"
+
+    while true; do
+
+        find "$CACHE_DIR" -type f | while read f; do
+
+            decompress_on_demand "$f"
+
+        done
+
+        sleep 0.2
+
+    done
+}
+
+# ============================================================
+# QINT CONTAINER BUILDER
+# ============================================================
+
+build_qint_container() {
+
+    echo "[QINT] building container"
+
+    tar -cf - \
+        "$HOT_DIR" \
+        "$CACHE_DIR" \
+        "$COLD_DIR" \
+        "$AI_DIR" | \
+    zstd -19 -T0 \
+    > "$BUILD_DIR/fxion_runtime.qint"
+
+    sha256sum \
+        "$BUILD_DIR/fxion_runtime.qint" \
+        > "$BUILD_DIR/fxion_runtime.qint.sha256"
+}
+
+# ============================================================
+# TELEMETRY
+# ============================================================
+
+telemetry_loop() {
+
+    while true; do
+
+        echo "========== FXION =========="
+
+        echo "CPU THREADS: $CPU_THREADS"
+
+        if [ "$GPU_AVAILABLE" -eq 1 ]; then
+
+            nvidia-smi \
+                --query-gpu=name,temperature.gpu,utilization.gpu,memory.used \
+                --format=csv,noheader
+
+        fi
+
+        du -sh "$HOT_DIR" \
+               "$CACHE_DIR" \
+               "$COLD_DIR"
+
+        sleep 5
+
+    done
+}
+
+# ============================================================
+# MAIN PIPELINE
+# ============================================================
+
+INPUT="$1"
+
+if [ -z "$INPUT" ]; then
+
+    echo "Usage:"
+    echo "./fxion_qint.sh file.bin"
+
+    exit 1
+fi
+
+echo "[FXION] splitting layers"
+
+split -b 32M "$INPUT" "$LAYER_DIR/block_"
+
+find "$LAYER_DIR" -type f | while read FILE; do
+
+    ENTROPY=$(entropy_scan "$FILE")
+
+    CLASS=$(ai_scheduler "$FILE" "$ENTROPY")
+
+    echo "[AI] $FILE -> $CLASS"
+
+    dynamic_compress "$FILE" "$CLASS" &
+
+done
+
+wait
+
+preload_hot_blocks
+
+vram_cache
+
+build_qint_container
+
+telemetry_loop &
+
+stream_engine

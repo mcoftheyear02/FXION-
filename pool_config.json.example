@@ -1,0 +1,7 @@
+{
+  "pool_url": "stratum+tcp://btc.viabtc.com",
+  "port": 3333,
+  "worker_name": "FXION_Worker",
+  "worker_password": "x",
+  "wallet_address": "1FXION811654be4f8498f8d5929794047d"
+}

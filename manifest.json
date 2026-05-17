@@ -1,0 +1,22 @@
+{
+  "project": "FXION-ONYX",
+  "version": "FINAL-Q8",
+  "build": "2026-05-09",
+  "quant": "Q8_0",
+  "policy": "UCB1-C1.414",
+  "gpu": "GTX970-4GB",
+  "modules": [
+    "omnitech_core",
+    "system_class",
+    "qfx_optimizer",
+    "nnox_scheduler",
+    "onyx_runtime",
+    "fxion_pcie_engine",
+    "neural_core",
+    "neural_core_qfx",
+    "ai_engine",
+    "ai_engine_qfx",
+    "qfx_quant"
+  ],
+  "modes": 14
+}

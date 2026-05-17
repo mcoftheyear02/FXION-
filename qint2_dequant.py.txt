@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+# qint2_dequant.py
+# QINT2 dequantizer for FXION-ONYX
+
+from typing import List
+
+BITS_TO_Q = {
+    "00": -3,
+    "01": -1,
+    "10":  1,
+    "11":  3,
+}
+
+
+def dequantize_value(bits: str, scale: float) -> float:
+    if bits not in BITS_TO_Q:
+        raise ValueError(f"Invalid QINT2 bits: {bits}")
+    return scale * BITS_TO_Q[bits]
+
+
+def dequantize_block(bits_list: List[str], scale: float) -> List[float]:
+    return [dequantize_value(b, scale) for b in bits_list]
+
+
+if __name__ == "__main__":
+    bits_list = ["01", "11", "10", "00"]
+    scale = 0.2
+    xs = dequantize_block(bits_list, scale)
+
+    print("bits :", bits_list)
+    print("scale:", scale)
+    print("x    :", xs)

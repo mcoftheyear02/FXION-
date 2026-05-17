@@ -33,7 +33,8 @@ class ArmState:
 class UCB1Policy:
     """UCB1 (Upper Confidence Bound) policy for quantization selection."""
     
-    QUANT_LEVELS = ['Q2_K', 'Q3_K', 'Q4_K_M', 'Q5_K_M', 'Q6_K', 'Q8_0']
+    QUANT_LEVELS = ['Q2_K', 'Q3_K', 'Q4_K_M', 'Q5_K_M', 'Q6_K', 'Q8_0',
+                     'IQ2_XS', 'IQ3_M', 'IQ4_XS', 'IQ4_NL']
     
     def __init__(self, state_file: str = '/tmp/ucb1_policy.json', 
                  exploration_param: float = 2.0):

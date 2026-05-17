@@ -8,7 +8,8 @@ from typing import Optional, Dict, List
 
 log = logging.getLogger("FXION.ENGINE")
 
-QUANTS = ["Q2_K", "Q3_K", "Q4_K_M", "Q5_K_M", "Q6_K", "Q8_0"]
+QUANTS = ["Q2_K", "Q3_K", "Q4_K_M", "Q5_K_M", "Q6_K", "Q8_0",
+          "IQ2_XS", "IQ3_M", "IQ4_XS", "IQ4_NL"]
 
 # Performance profiles per quant level (GTX 970 @ 1550MHz)
 PROFILES = {
@@ -18,6 +19,11 @@ PROFILES = {
     "Q5_K_M": {"tps": 140.0, "vram_gb": 3.2, "accuracy": 0.940, "block_size": 256},
     "Q6_K":   {"tps": 134.0, "vram_gb": 3.5, "accuracy": 0.970, "block_size": 256},
     "Q8_0":   {"tps": 128.4, "vram_gb": 3.8, "accuracy": 0.991, "block_size": 256},
+    # IQ importance-matrix variants (mirrored from QFX optimizer / Omnitech.IQQuant.psm1)
+    "IQ2_XS": {"tps": 214.7, "vram_gb": 0.95, "accuracy": 0.840, "block_size": 256},
+    "IQ3_M":  {"tps": 188.9, "vram_gb": 1.45, "accuracy": 0.910, "block_size": 256},
+    "IQ4_XS": {"tps": 171.6, "vram_gb": 1.85, "accuracy": 0.950, "block_size": 256},
+    "IQ4_NL": {"tps": 166.2, "vram_gb": 2.05, "accuracy": 0.975, "block_size": 256},
 }
 
 

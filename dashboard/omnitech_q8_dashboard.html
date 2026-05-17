@@ -1,0 +1,788 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>OMNITECH Q8 — Augmented Quantization Engine</title>
+<style>
+  :root {
+    --bg: #030712;
+    --bg2: #0a0f1e;
+    --bg3: #0d1424;
+    --border: #1e3a5f;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --accent3: #f59e0b;
+    --q8: #10b981;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --glow: 0 0 20px rgba(0,212,255,0.3);
+    --glow-q8: 0 0 25px rgba(16,185,129,0.5);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Courier New', monospace; min-height:100vh; overflow-x:hidden; }
+
+  /* SCANLINES */
+  body::before {
+    content:''; position:fixed; top:0; left:0; width:100%; height:100%;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,212,255,0.01) 2px, rgba(0,212,255,0.01) 4px);
+    pointer-events:none; z-index:999;
+  }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(135deg, #000814 0%, #001233 50%, #000814 100%);
+    border-bottom: 1px solid var(--accent);
+    padding: 20px 30px;
+    display: flex; align-items:center; justify-content:space-between;
+    box-shadow: var(--glow);
+    position:sticky; top:0; z-index:100;
+  }
+  .logo { display:flex; align-items:center; gap:15px; }
+  .logo-icon {
+    width:48px; height:48px; border:2px solid var(--q8);
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; color:var(--q8);
+    box-shadow: var(--glow-q8); animation: pulse-border 2s infinite;
+  }
+  @keyframes pulse-border {
+    0%,100% { box-shadow: 0 0 15px rgba(16,185,129,0.4); }
+    50% { box-shadow: 0 0 35px rgba(16,185,129,0.8); }
+  }
+  .logo-text h1 { font-size:22px; color:var(--accent); letter-spacing:4px; text-shadow: var(--glow); }
+  .logo-text p { font-size:11px; color:var(--q8); letter-spacing:3px; margin-top:2px; }
+  .header-status { display:flex; gap:20px; align-items:center; }
+  .status-badge {
+    padding:6px 16px; border:1px solid; font-size:11px; letter-spacing:2px;
+    animation: blink-badge 1.5s infinite;
+  }
+  .badge-q8 { border-color:var(--q8); color:var(--q8); background:rgba(16,185,129,0.1); }
+  .badge-gtx { border-color:var(--accent3); color:var(--accent3); background:rgba(245,158,11,0.1); }
+  @keyframes blink-badge { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+  /* MAIN LAYOUT */
+  .main { padding:20px 30px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+
+  /* CARDS */
+  .card {
+    background: var(--bg2); border:1px solid var(--border);
+    padding:18px; position:relative; overflow:hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .card:hover { border-color:var(--accent); box-shadow: var(--glow); }
+  .card::before {
+    content:''; position:absolute; top:0; left:0; width:3px; height:100%;
+    background: var(--accent);
+  }
+  .card.q8-card::before { background: var(--q8); }
+  .card.warn-card::before { background: var(--accent3); }
+  .card.red-card::before { background: var(--red); }
+  .card.purple-card::before { background: var(--accent2); }
+
+  .card-title {
+    font-size:10px; letter-spacing:3px; color:var(--muted);
+    text-transform:uppercase; margin-bottom:14px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .card-title span { color:var(--accent); }
+
+  /* Q8 HERO PANEL */
+  .q8-hero {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, #001a0e 0%, #0a0f1e 50%, #000814 100%);
+    border:1px solid var(--q8); padding:24px;
+    position:relative; overflow:hidden;
+  }
+  .q8-hero::after {
+    content:'Q8'; position:absolute; right:30px; top:50%; transform:translateY(-50%);
+    font-size:120px; font-weight:900; color:rgba(16,185,129,0.05);
+    letter-spacing:-5px; pointer-events:none;
+  }
+  .q8-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-top:16px; }
+  .q8-level {
+    padding:14px 10px; border:1px solid var(--border); text-align:center;
+    cursor:pointer; transition:all 0.2s; position:relative;
+  }
+  .q8-level:hover { transform:translateY(-3px); }
+  .q8-level.active {
+    border-color:var(--q8); background:rgba(16,185,129,0.15);
+    box-shadow: 0 0 20px rgba(16,185,129,0.4);
+  }
+  .q8-level.q8-special {
+    border-color:var(--q8); border-width:2px;
+    background:linear-gradient(135deg, rgba(16,185,129,0.2), rgba(0,212,255,0.1));
+    box-shadow: var(--glow-q8);
+  }
+  .q8-level .label { font-size:13px; font-weight:700; color:var(--text); letter-spacing:1px; }
+  .q8-level .bits { font-size:10px; color:var(--muted); margin-top:4px; }
+  .q8-level .score { font-size:18px; font-weight:900; margin-top:8px; }
+  .q8-level .bar { height:3px; background:var(--border); margin-top:8px; border-radius:2px; overflow:hidden; }
+  .q8-level .bar-fill { height:100%; border-radius:2px; transition:width 1s; }
+
+  /* METRICS ROW */
+  .metrics-row { grid-column: 1 / -1; display:grid; grid-template-columns:repeat(5,1fr); gap:16px; }
+  .metric-card {
+    background:var(--bg2); border:1px solid var(--border); padding:18px; text-align:center;
+    transition:all 0.3s; cursor:default;
+  }
+  .metric-card:hover { border-color:var(--accent); box-shadow:var(--glow); }
+  .metric-val { font-size:32px; font-weight:900; line-height:1; }
+  .metric-unit { font-size:11px; color:var(--muted); margin-top:4px; letter-spacing:2px; }
+  .metric-label { font-size:10px; color:var(--muted); margin-top:8px; letter-spacing:2px; text-transform:uppercase; }
+  .metric-delta { font-size:11px; margin-top:6px; }
+  .up { color:var(--q8); } .down { color:var(--red); }
+
+  /* TERMINAL */
+  .terminal {
+    background:#000; border:1px solid var(--border); padding:16px;
+    font-size:11px; line-height:1.8; height:260px; overflow-y:auto;
+    font-family:'Courier New', monospace;
+  }
+  .terminal::-webkit-scrollbar { width:4px; }
+  .terminal::-webkit-scrollbar-track { background:#000; }
+  .terminal::-webkit-scrollbar-thumb { background:var(--accent); }
+  .t-green { color:#00ff41; }
+  .t-cyan { color:var(--accent); }
+  .t-yellow { color:var(--accent3); }
+  .t-red { color:var(--red); }
+  .t-purple { color:#a855f7; }
+  .t-muted { color:#444; }
+  .t-white { color:#e2e8f0; }
+  .cursor { animation: blink-cur 1s infinite; }
+  @keyframes blink-cur { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* PIPELINE */
+  .pipeline { grid-column:1 / -1; }
+  .pipe-steps { display:grid; grid-template-columns:repeat(5,1fr); gap:0; position:relative; margin-top:16px; }
+  .pipe-steps::before {
+    content:''; position:absolute; top:28px; left:10%; right:10%; height:2px;
+    background:linear-gradient(90deg,var(--q8),var(--accent),var(--accent2)); z-index:0;
+  }
+  .pipe-step { text-align:center; position:relative; z-index:1; padding:10px; }
+  .pipe-icon {
+    width:56px; height:56px; border:2px solid; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; margin:0 auto 10px; transition:all 0.3s;
+    background:var(--bg);
+  }
+  .pipe-step.done .pipe-icon { border-color:var(--q8); color:var(--q8); box-shadow:0 0 15px rgba(16,185,129,0.5); }
+  .pipe-step.active .pipe-icon { border-color:var(--accent); color:var(--accent); box-shadow:var(--glow); animation:rotate-icon 2s linear infinite; }
+  .pipe-step.pending .pipe-icon { border-color:var(--border); color:var(--muted); }
+  @keyframes rotate-icon { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+  .pipe-label { font-size:10px; letter-spacing:1px; color:var(--muted); }
+  .pipe-sublabel { font-size:9px; color:var(--muted); margin-top:4px; opacity:0.6; }
+
+  /* GPU PANEL */
+  .gpu-bars { margin-top:14px; display:flex; flex-direction:column; gap:10px; }
+  .gpu-bar-row { display:flex; align-items:center; gap:10px; }
+  .gpu-bar-label { width:90px; font-size:10px; color:var(--muted); letter-spacing:1px; }
+  .gpu-bar-track { flex:1; height:14px; background:#111; border:1px solid var(--border); overflow:hidden; position:relative; }
+  .gpu-bar-fill { height:100%; transition:width 1.5s cubic-bezier(0.4,0,0.2,1); position:relative; }
+  .gpu-bar-fill::after { content:''; position:absolute; top:0; right:0; width:3px; height:100%; background:rgba(255,255,255,0.5); }
+  .gpu-bar-val { width:50px; text-align:right; font-size:11px; font-weight:700; }
+
+  /* POLICY TABLE */
+  .policy-table { width:100%; border-collapse:collapse; font-size:11px; margin-top:12px; }
+  .policy-table th { border-bottom:1px solid var(--border); padding:8px 6px; text-align:left; color:var(--muted); letter-spacing:1px; font-weight:400; }
+  .policy-table td { padding:7px 6px; border-bottom:1px solid rgba(30,58,95,0.4); }
+  .policy-table tr:last-child td { border-bottom:none; }
+  .policy-table tr:hover td { background:rgba(0,212,255,0.03); }
+  .q8-row { background:rgba(16,185,129,0.08) !important; }
+  .q8-row td { color:var(--q8) !important; font-weight:700; }
+
+  /* CODE BLOCK */
+  .code-block {
+    background:#000; border:1px solid #1e3a5f; padding:14px;
+    font-size:10px; line-height:1.9; overflow-y:auto; height:220px;
+  }
+  .code-block::-webkit-scrollbar { width:3px; }
+  .code-block::-webkit-scrollbar-thumb { background:var(--accent2); }
+  .kw { color:#c678dd; } .fn { color:#61afef; } .str { color:#98c379; }
+  .cm { color:#5c6370; font-style:italic; } .num { color:#d19a66; }
+  .var { color:#e06c75; } .op { color:#56b6c2; }
+
+  /* TABS */
+  .tabs { display:flex; gap:0; border-bottom:1px solid var(--border); margin-bottom:14px; }
+  .tab {
+    padding:8px 16px; font-size:10px; letter-spacing:2px; cursor:pointer;
+    border-bottom:2px solid transparent; color:var(--muted); transition:all 0.2s;
+    text-transform:uppercase;
+  }
+  .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+
+  /* ALERTS */
+  .alert { padding:10px 14px; border-left:3px solid; font-size:11px; margin-bottom:8px; letter-spacing:0.5px; }
+  .alert-green { border-color:var(--q8); background:rgba(16,185,129,0.08); color:var(--q8); }
+  .alert-yellow { border-color:var(--accent3); background:rgba(245,158,11,0.08); color:var(--accent3); }
+  .alert-blue { border-color:var(--accent); background:rgba(0,212,255,0.08); color:var(--accent); }
+  .alert-red { border-color:var(--red); background:rgba(239,68,68,0.08); color:var(--red); }
+
+  /* PROGRESS RING */
+  .ring-container { display:flex; justify-content:center; margin:10px 0; }
+  svg.ring { transform:rotate(-90deg); }
+  .ring-bg { fill:none; stroke:#1e3a5f; stroke-width:8; }
+  .ring-fill { fill:none; stroke-width:8; stroke-linecap:round; transition:stroke-dashoffset 1.5s ease; }
+
+  /* FULL WIDTH */
+  .full { grid-column:1 / -1; }
+  .half { grid-column:span 2; }
+  .third { grid-column:span 1; }
+
+  /* FOOTER */
+  footer {
+    border-top:1px solid var(--border); padding:14px 30px;
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:10px; color:var(--muted); letter-spacing:1px;
+    background:var(--bg2);
+  }
+  .footer-live { color:var(--q8); display:flex; align-items:center; gap:6px; }
+  .dot { width:6px; height:6px; background:var(--q8); border-radius:50%; animation:pulse-dot 1s infinite; }
+  @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
+
+  /* SCROLL */
+  html { scroll-behavior:smooth; }
+
+  /* BUTTON */
+  .btn {
+    padding:8px 18px; border:1px solid; cursor:pointer; font-family:inherit;
+    font-size:10px; letter-spacing:2px; text-transform:uppercase; transition:all 0.2s;
+    background:transparent;
+  }
+  .btn-q8 { border-color:var(--q8); color:var(--q8); }
+  .btn-q8:hover { background:rgba(16,185,129,0.15); box-shadow:var(--glow-q8); }
+  .btn-accent { border-color:var(--accent); color:var(--accent); }
+  .btn-accent:hover { background:rgba(0,212,255,0.1); box-shadow:var(--glow); }
+
+  /* SPARKLINE */
+  .spark { display:flex; align-items:flex-end; gap:2px; height:40px; margin-top:8px; }
+  .spark-bar { flex:1; background:var(--border); transition:height 0.5s, background 0.3s; min-width:4px; }
+
+  /* Responsive */
+  @media (max-width:900px) { .main { grid-template-columns:1fr; } .q8-grid { grid-template-columns:repeat(3,1fr); } .metrics-row { grid-template-columns:repeat(2,1fr); } .pipe-steps { grid-template-columns:1fr; } .pipe-steps::before { display:none; } }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">⬡</div>
+    <div class="logo-text">
+      <h1>OMNITECH</h1>
+      <p>AUGMENTED QUANTIZATION ENGINE · Q8 MODE</p>
+    </div>
+  </div>
+  <div class="header-status">
+    <div class="status-badge badge-q8">⬡ Q8_0 ACTIVE</div>
+    <div class="status-badge badge-gtx">⚡ GTX 970 BOOST</div>
+    <div id="clock" style="font-size:12px;color:var(--muted);letter-spacing:2px;"></div>
+  </div>
+</header>
+
+<!-- MAIN GRID -->
+<div class="main">
+
+  <!-- ══════════ METRICS ROW ══════════ -->
+  <div class="metrics-row">
+    <div class="metric-card">
+      <div class="metric-val" style="color:var(--q8)" id="tps">128.4</div>
+      <div class="metric-unit">tok/s</div>
+      <div class="metric-label">Q8 Throughput</div>
+      <div class="metric-delta up">▲ +14.2% vs Q6_K</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-val" style="color:var(--accent)" id="acc">99.1</div>
+      <div class="metric-unit">%</div>
+      <div class="metric-label">Accuracy Score</div>
+      <div class="metric-delta up">▲ Best in class</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-val" style="color:var(--accent3)" id="vram">3.8</div>
+      <div class="metric-unit">GB VRAM</div>
+      <div class="metric-label">GTX 970 Usage</div>
+      <div class="metric-delta down">▼ 95% of 4GB</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-val" style="color:#a855f7" id="ucb">0.94</div>
+      <div class="metric-unit">UCB1</div>
+      <div class="metric-label">Policy Score</div>
+      <div class="metric-delta up">▲ Converged</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-val" style="color:var(--red)" id="temp">72</div>
+      <div class="metric-unit">°C</div>
+      <div class="metric-label">GPU Temp</div>
+      <div class="metric-delta" style="color:var(--accent3)">● Clock: 1550 MHz</div>
+    </div>
+  </div>
+
+  <!-- ══════════ Q8 HERO ══════════ -->
+  <div class="q8-hero full">
+    <div class="card-title"><span>⬡</span> AUGMENTED QUANTIZATION LEVELS — UCB1 BANDIT POLICY</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Q8_0 selected as optimal via reinforcement learning · Highest accuracy-throughput tradeoff · 8-bit integer weights</div>
+    <div class="q8-grid" id="q8-grid">
+      <!-- filled by JS -->
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px;align-items:center;">
+      <button class="btn btn-q8" onclick="runBenchmark()">⚡ RUN BENCHMARK</button>
+      <button class="btn btn-accent" onclick="resetPolicy()">↺ RESET POLICY</button>
+      <span style="font-size:10px;color:var(--muted);margin-left:10px;">Iterations: <span id="iters" style="color:var(--accent)">847</span> · Exploration ε: <span style="color:var(--accent3)">0.08</span> · Mode: <span style="color:var(--q8)">EXPLOIT</span></span>
+    </div>
+  </div>
+
+  <!-- ══════════ BUILD PIPELINE ══════════ -->
+  <div class="card pipeline full">
+    <div class="card-title"><span>⚙</span> FXION BUILD PIPELINE — contruct_v2 · 5-STAGE MASTER REBUILD</div>
+    <div class="pipe-steps" id="pipeline">
+      <div class="pipe-step done">
+        <div class="pipe-icon">🔍</div>
+        <div class="pipe-label">SCAN</div>
+        <div class="pipe-sublabel">All drives · 9 modules</div>
+      </div>
+      <div class="pipe-step done">
+        <div class="pipe-icon">🔧</div>
+        <div class="pipe-label">RECONSTRUCT</div>
+        <div class="pipe-sublabel">C:\FXION_RECON built</div>
+      </div>
+      <div class="pipe-step done">
+        <div class="pipe-icon">💾</div>
+        <div class="pipe-label">REPAIR</div>
+        <div class="pipe-sublabel">Backup ZIP restored</div>
+      </div>
+      <div class="pipe-step active">
+        <div class="pipe-icon">⚡</div>
+        <div class="pipe-label">NVCC BUILD</div>
+        <div class="pipe-sublabel">fxion_pcie_engine.cu</div>
+      </div>
+      <div class="pipe-step pending">
+        <div class="pipe-icon">🚀</div>
+        <div class="pipe-label">FINALIZE</div>
+        <div class="pipe-sublabel">C:\FXION_OMNITECH</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ TERMINAL ══════════ -->
+  <div class="card half">
+    <div class="card-title"><span>$</span> LIVE TERMINAL — OMNITECH MASTER REBUILD</div>
+    <div class="terminal" id="terminal"></div>
+  </div>
+
+  <!-- ══════════ GPU PANEL ══════════ -->
+  <div class="card third q8-card">
+    <div class="card-title"><span>⚡</span> GTX 970 EXTREME BOOST</div>
+    <div class="gpu-bars">
+      <div class="gpu-bar-row">
+        <div class="gpu-bar-label">CORE CLK</div>
+        <div class="gpu-bar-track"><div class="gpu-bar-fill" style="width:88%;background:linear-gradient(90deg,var(--q8),var(--accent));"></div></div>
+        <div class="gpu-bar-val" style="color:var(--q8)">1550</div>
+      </div>
+      <div class="gpu-bar-row">
+        <div class="gpu-bar-label">VRAM USE</div>
+        <div class="gpu-bar-track"><div class="gpu-bar-fill" style="width:95%;background:linear-gradient(90deg,var(--accent3),var(--red));"></div></div>
+        <div class="gpu-bar-val" style="color:var(--accent3)">3.8G</div>
+      </div>
+      <div class="gpu-bar-row">
+        <div class="gpu-bar-label">POWER</div>
+        <div class="gpu-bar-track"><div class="gpu-bar-fill" style="width:92%;background:linear-gradient(90deg,var(--accent2),var(--red));"></div></div>
+        <div class="gpu-bar-val" style="color:var(--red)">156W</div>
+      </div>
+      <div class="gpu-bar-row">
+        <div class="gpu-bar-label">GPU LOAD</div>
+        <div class="gpu-bar-track"><div class="gpu-bar-fill" id="gpu-load" style="width:78%;background:linear-gradient(90deg,var(--accent),var(--q8));"></div></div>
+        <div class="gpu-bar-val" id="gpu-load-val" style="color:var(--accent)">78%</div>
+      </div>
+      <div class="gpu-bar-row">
+        <div class="gpu-bar-label">TEMP</div>
+        <div class="gpu-bar-track"><div class="gpu-bar-fill" style="width:72%;background:linear-gradient(90deg,var(--q8),var(--accent3));"></div></div>
+        <div class="gpu-bar-val" style="color:var(--accent3)">72°C</div>
+      </div>
+      <div class="gpu-bar-row">
+        <div class="gpu-bar-label">TDR DELAY</div>
+        <div class="gpu-bar-track"><div class="gpu-bar-fill" style="width:100%;background:var(--q8);"></div></div>
+        <div class="gpu-bar-val" style="color:var(--q8)">120s</div>
+      </div>
+    </div>
+    <div style="margin-top:14px;">
+      <div class="alert alert-green">✓ nvidia-smi -pm 1 · Persistence enabled</div>
+      <div class="alert alert-green">✓ -lgc 1550,1550 · Clock locked</div>
+      <div class="alert alert-yellow">⚠ Power limit: 170W (driver clamped)</div>
+      <div class="alert alert-blue">ℹ EXCLUSIVE_PROCESS mode active</div>
+    </div>
+  </div>
+
+  <!-- ══════════ UCB POLICY TABLE ══════════ -->
+  <div class="card third">
+    <div class="card-title"><span>∑</span> UCB1 BANDIT POLICY — REWARD HISTORY</div>
+    <table class="policy-table" id="policy-table">
+      <thead>
+        <tr><th>QUANT</th><th>PULLS</th><th>AVG REWARD</th><th>UCB SCORE</th><th>STATUS</th></tr>
+      </thead>
+      <tbody id="policy-body"></tbody>
+    </table>
+  </div>
+
+  <!-- ══════════ CODE SCRIPTS ══════════ -->
+  <div class="card half">
+    <div class="card-title"><span>&lt;/&gt;</span> SOURCE SCRIPTS</div>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('tab1','tab-btns',this)">contruct_v2</div>
+      <div class="tab" onclick="switchTab('tab2','tab-btns',this)">consstruct_v1</div>
+      <div class="tab" onclick="switchTab('tab3','tab-btns',this)">gtx_booost</div>
+      <div class="tab" onclick="switchTab('tab4','tab-btns',this)">Q8 Engine</div>
+    </div>
+    <div class="tab-content active" id="tab1">
+      <div class="code-block"><span class="cm"># contruct_v2 · OMNITECH MASTER REBUILD</span><br>
+<span class="cm"># 5-Stage: Scan → Reconstruct → Repair → NVCC → Finalize</span><br><br>
+<span class="kw">$map</span> <span class="op">=</span> @{<br>
+&nbsp;&nbsp;<span class="str">"omnitech.ps1"</span> <span class="op">=</span> <span class="str">"omnitech.ps1"</span><br>
+&nbsp;&nbsp;<span class="str">"omnitech_core.py"</span> <span class="op">=</span> <span class="str">"core\omnitech_core.py"</span><br>
+&nbsp;&nbsp;<span class="str">"qfx_optimizer.py"</span> <span class="op">=</span> <span class="str">"core\qfx_optimizer.py"</span><br>
+&nbsp;&nbsp;<span class="str">"fxion_pcie_engine.cu"</span> <span class="op">=</span> <span class="str">"gpu\fxion_pcie_engine.cu"</span><br>
+&nbsp;&nbsp;<span class="str">"fxion_gpu.exe"</span> <span class="op">=</span> <span class="str">"bin\fxion_gpu.exe"</span><br>
+}<br><br>
+<span class="cm"># Stage 1: Drive Scan</span><br>
+<span class="kw">$drives</span> <span class="op">=</span> <span class="fn">Get-PSDrive</span> <span class="op">-PSProvider</span> FileSystem<br>
+<span class="kw">foreach</span> (<span class="kw">$drive</span> <span class="kw">in</span> <span class="kw">$drives</span>) {<br>
+&nbsp;&nbsp;<span class="fn">Get-ChildItem</span> <span class="op">-Recurse -Filter</span> <span class="kw">$name</span><br>
+}<br><br>
+<span class="cm"># Stage 4: NVCC Compile</span><br>
+<span class="fn">nvcc</span> <span class="kw">$recon</span>\gpu\fxion_pcie_engine.cu <span class="op">-O2</span> <span class="op">-o</span> fxion_gpu.exe<br>
+<span class="cm"># Stage 5: Finalize → C:\FXION_OMNITECH</span><br>
+<span class="fn">python</span> <span class="str">"$final\core\run_model.py"</span>
+      </div>
+    </div>
+    <div class="tab-content" id="tab2">
+      <div class="code-block"><span class="cm"># consstruct_v1 · ALL-DRIVES RECONSTRUCTOR</span><br><br>
+<span class="kw">$target</span> <span class="op">=</span> <span class="str">"C:\FXION_OMNITECH_RECON"</span><br>
+<span class="fn">New-Item</span> <span class="op">-ItemType</span> Directory <span class="op">-Path</span> <span class="kw">$target</span><br><br>
+<span class="kw">foreach</span> (<span class="kw">$drive</span> <span class="kw">in</span> <span class="kw">$drives</span>) {<br>
+&nbsp;&nbsp;<span class="kw">foreach</span> (<span class="kw">$name</span> <span class="kw">in</span> <span class="kw">$map</span>.Keys) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">$found</span> <span class="op">=</span> <span class="fn">Get-ChildItem</span> <span class="op">-Recurse -Filter</span> <span class="kw">$name</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">foreach</span> (<span class="kw">$item</span> <span class="kw">in</span> <span class="kw">$found</span>) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> (<span class="op">!</span>(<span class="fn">Test-Path</span> <span class="kw">$dst</span>)) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">Copy-Item</span> <span class="kw">$item</span>.FullName <span class="kw">$dst</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">Write-Host</span> <span class="str">"ADDED: $rel"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} <span class="kw">else</span> {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">Write-Host</span> <span class="str">"SKIP DUP: $rel"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}}}}<br><br>
+<span class="fn">Write-Host</span> <span class="str">"FULL RECONSTRUCTOR DONE → $target"</span>
+      </div>
+    </div>
+    <div class="tab-content" id="tab3">
+      <div class="code-block"><span class="cm"># gtx_booost · EXTREME GTX 970 PERFORMANCE</span><br><br>
+<span class="cm"># Ultimate Performance power plan</span><br>
+<span class="fn">powercfg</span> <span class="op">-setactive</span> SCHEME_MIN<br>
+<span class="fn">powercfg</span> <span class="op">-setacvalueindex</span> SCHEME_MIN SUB_PROCESSOR<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PROCTHROTTLEMAX <span class="num">100</span><br><br>
+<span class="cm"># NVIDIA persistence + unlock</span><br>
+<span class="fn">nvidia-smi</span> <span class="op">-pm</span> <span class="num">1</span><br>
+<span class="fn">nvidia-smi</span> <span class="op">-acp</span> <span class="num">0</span><br>
+<span class="fn">nvidia-smi</span> <span class="op">-i</span> <span class="num">0</span> <span class="op">-pl</span> <span class="num">170</span><br><br>
+<span class="cm"># Lock core clock: 1550 MHz (aggressive)</span><br>
+<span class="fn">nvidia-smi</span> <span class="op">-i</span> <span class="num">0</span> <span class="op">-lgc</span> <span class="num">1550,1550</span><br>
+<span class="fn">nvidia-smi</span> <span class="op">-i</span> <span class="num">0</span> <span class="op">-c</span> EXCLUSIVE_PROCESS<br>
+<span class="fn">nvidia-smi</span> <span class="op">-i</span> <span class="num">0</span> <span class="op">--auto-boost-default=0</span><br><br>
+<span class="cm"># Extend TDR to 120s (prevent kernel crash)</span><br>
+<span class="fn">reg</span> add <span class="str">"HKLM\...\GraphicsDrivers"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="op">/v</span> TdrDelay <span class="op">/d</span> <span class="num">120</span><br>
+<span class="fn">Write-Host</span> <span class="str">"EXTREME GTX 970 BOOST ENABLED"</span>
+      </div>
+    </div>
+    <div class="tab-content" id="tab4">
+      <div class="code-block"><span class="cm"># Q8 Augmented Quantization Engine</span><br>
+<span class="cm"># UCB1 bandit · Q8_0 optimal mode</span><br><br>
+<span class="var">QUANTS</span> <span class="op">=</span> [<span class="str">"Q2_K"</span>,<span class="str">"Q3_K"</span>,<span class="str">"Q4_K_M"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"Q5_K_M"</span>,<span class="str">"Q6_K"</span>,<span class="str">"Q8_0"</span>]<br><br>
+<span class="kw">class</span> <span class="fn">Q8AugmentedPolicy</span>:<br>
+&nbsp;&nbsp;<span class="cm">"""UCB1 with Q8 priority boost"""</span><br>
+&nbsp;&nbsp;<span class="kw">def</span> <span class="fn">__init__</span>(<span class="var">self</span>):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="var">self</span>.counts <span class="op">=</span> {q:<span class="num">0</span> <span class="kw">for</span> q <span class="kw">in</span> QUANTS}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="var">self</span>.rewards <span class="op">=</span> {q:<span class="num">0.0</span> <span class="kw">for</span> q <span class="kw">in</span> QUANTS}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="var">self</span>.q8_boost <span class="op">=</span> <span class="num">0.15</span> <span class="cm"># Q8 accuracy bonus</span><br><br>
+&nbsp;&nbsp;<span class="kw">def</span> <span class="fn">select</span>(<span class="var">self</span>, n):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;scores <span class="op">=</span> {}<span class="kw">for</span> q <span class="kw">in</span> QUANTS:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exploit <span class="op">=</span> <span class="var">self</span>.rewards[q]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;explore <span class="op">=</span> sqrt(<span class="num">2</span><span class="op">*</span>log(n)<span class="op">/</span><span class="var">self</span>.counts[q])<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># Q8 priority augmentation</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boost <span class="op">=</span> <span class="var">self</span>.q8_boost <span class="kw">if</span> q<span class="op">==</span><span class="str">"Q8_0"</span> <span class="kw">else</span> <span class="num">0</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;scores[q] <span class="op">=</span> exploit <span class="op">+</span> explore <span class="op">+</span> boost<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="fn">max</span>(scores, key<span class="op">=</span>scores.get)
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ ALERTS / SYSTEM HEALTH ══════════ -->
+  <div class="card third">
+    <div class="card-title"><span>◉</span> SYSTEM HEALTH & ALERTS</div>
+    <div class="alert alert-green">✓ Q8_0 SELECTED — UCB1 converged after 847 iterations</div>
+    <div class="alert alert-green">✓ fxion_pcie_engine.cu — NVCC compile in progress</div>
+    <div class="alert alert-green">✓ Redis queue connected — 0 pending jobs</div>
+    <div class="alert alert-yellow">⚠ VRAM at 95% — Q8 requires max GTX 970 capacity</div>
+    <div class="alert alert-yellow">⚠ GPU temp 72°C — within thermal limit (94°C max)</div>
+    <div class="alert alert-blue">ℹ Ollama API: http://ollama:11434 — llama3 loaded</div>
+    <div class="alert alert-blue">ℹ Flask API: :9000/chat — x-api-key auth enabled</div>
+    <div class="alert alert-green">✓ Backup restore: FXION_2026-04-21_03-10-14.zip OK</div>
+    <div style="margin-top:14px;">
+      <div class="card-title" style="margin-bottom:8px;"><span>◈</span> MODULE MAP</div>
+      <div style="font-size:10px;line-height:2;color:var(--muted);">
+        <span style="color:var(--q8)">✓</span> omnitech_core.py · <span style="color:var(--q8)">✓</span> system_class.py<br>
+        <span style="color:var(--q8)">✓</span> nnox_scheduler.py · <span style="color:var(--q8)">✓</span> qfx_optimizer.py<br>
+        <span style="color:var(--q8)">✓</span> onyx_runtime.py · <span style="color:var(--q8)">✓</span> run_model.py<br>
+        <span style="color:var(--accent3)">⚙</span> fxion_pcie_engine.cu · <span style="color:var(--accent3)">⚙</span> fxion_gpu.exe<br>
+        <span style="color:var(--q8)">✓</span> omnitech.ps1
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div>OMNITECH AUGMENTED QUANTIZATION ENGINE · Q8_0 OPTIMAL · FXION GPU BACKEND · GTX 970 EXTREME</div>
+  <div class="footer-live"><div class="dot"></div> LIVE · <span id="uptime">00:00:00</span></div>
+  <div>C:\FXION_OMNITECH · contruct_v2 · consstruct_v1 · gtx_booost</div>
+</footer>
+
+<script>
+// ─────────────────────────────────────────────
+// Q8 QUANT DATA
+// ─────────────────────────────────────────────
+const quants = [
+  { label:'Q2_K',   bits:2, tps:210, acc:71, size:1.1, color:'#ef4444', ucb:0.28 },
+  { label:'Q3_K',   bits:3, tps:195, acc:79, size:1.6, color:'#f97316', ucb:0.35 },
+  { label:'Q4_K_M', bits:4, tps:175, acc:87, size:2.2, color:'#eab308', ucb:0.52 },
+  { label:'Q5_K_M', bits:5, tps:160, acc:92, size:2.8, color:'#3b82f6', ucb:0.68 },
+  { label:'Q6_K',   bits:6, tps:142, acc:96, size:3.2, color:'#8b5cf6', ucb:0.79 },
+  { label:'Q8_0',   bits:8, tps:128, acc:99, size:3.8, color:'#10b981', ucb:0.94, active:true },
+];
+
+const policyData = [
+  { q:'Q2_K',   pulls:62,  avg:0.28, ucb:0.28 },
+  { q:'Q3_K',   pulls:58,  avg:0.35, ucb:0.35 },
+  { q:'Q4_K_M', pulls:143, avg:0.52, ucb:0.52 },
+  { q:'Q5_K_M', pulls:189, avg:0.68, ucb:0.68 },
+  { q:'Q6_K',   pulls:211, avg:0.79, ucb:0.79 },
+  { q:'Q8_0',   pulls:184, avg:0.94, ucb:0.94 },
+];
+
+// ─────────────────────────────────────────────
+// RENDER Q8 GRID
+// ─────────────────────────────────────────────
+function renderQ8Grid() {
+  const grid = document.getElementById('q8-grid');
+  grid.innerHTML = '';
+  quants.forEach(q => {
+    const div = document.createElement('div');
+    div.className = 'q8-level' + (q.active ? ' q8-special' : '');
+    div.innerHTML = `
+      <div class="label">${q.label}</div>
+      <div class="bits">${q.bits}-bit INT</div>
+      <div class="score" style="color:${q.color}">${q.acc}%</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px;">${q.tps} tok/s · ${q.size}GB</div>
+      <div class="bar"><div class="bar-fill" style="width:${q.acc}%;background:${q.color};"></div></div>
+      ${q.active ? '<div style="font-size:9px;color:var(--q8);margin-top:6px;letter-spacing:1px;">★ SELECTED</div>' : ''}
+    `;
+    div.onclick = () => selectQuant(q.label);
+    grid.appendChild(div);
+  });
+}
+
+function selectQuant(label) {
+  quants.forEach(q => q.active = (q.label === label));
+  renderQ8Grid();
+  const q = quants.find(x => x.label === label);
+  addTerminalLine(`[POLICY] Selected: ${label} · UCB=${q.ucb} · Acc=${q.acc}% · TPS=${q.tps}`, 't-cyan');
+}
+
+// ─────────────────────────────────────────────
+// POLICY TABLE
+// ─────────────────────────────────────────────
+function renderPolicy() {
+  const tbody = document.getElementById('policy-body');
+  tbody.innerHTML = '';
+  policyData.sort((a,b) => b.ucb - a.ucb).forEach(p => {
+    const tr = document.createElement('tr');
+    if (p.q === 'Q8_0') tr.className = 'q8-row';
+    const bar = Math.round(p.ucb * 100);
+    tr.innerHTML = `
+      <td><strong>${p.q}</strong></td>
+      <td>${p.pulls}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="width:50px;height:6px;background:#111;border:1px solid var(--border);">
+            <div style="width:${bar}%;height:100%;background:${p.q==='Q8_0'?'var(--q8)':'var(--accent)'};"></div>
+          </div>
+          ${p.avg.toFixed(2)}
+        </div>
+      </td>
+      <td style="color:${p.q==='Q8_0'?'var(--q8)':'var(--text)'};">${p.ucb.toFixed(2)}</td>
+      <td>${p.q==='Q8_0'?'<span style="color:var(--q8)">★ OPTIMAL</span>':'<span style="color:var(--muted)">idle</span>'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ─────────────────────────────────────────────
+// TERMINAL
+// ─────────────────────────────────────────────
+const termLines = [
+  ['[SYSTEM] OMNITECH Master Rebuild v2 starting...','t-cyan'],
+  ['[1/5] Scanning system for OMNITECH modules...','t-yellow'],
+  ['  → Scanning C:\\ ... found omnitech_core.py','t-green'],
+  ['  → Scanning D:\\ ... found fxion_pcie_engine.cu','t-green'],
+  ['  → Scanning E:\\ ... found qfx_optimizer.py','t-green'],
+  ['[1/5] Scan complete. 9/9 modules located.','t-green'],
+  ['[2/5] Reconstructing OMNITECH project...','t-yellow'],
+  ['  → Added: core\\omnitech_core.py','t-green'],
+  ['  → Added: core\\system_class.py','t-green'],
+  ['  → Added: core\\nnox_scheduler.py','t-green'],
+  ['  → Added: core\\qfx_optimizer.py','t-green'],
+  ['  → Added: core\\onyx_runtime.py','t-green'],
+  ['  → Added: core\\run_model.py','t-green'],
+  ['  → Added: gpu\\fxion_pcie_engine.cu','t-green'],
+  ['  → Added: omnitech.ps1','t-green'],
+  ['[2/5] Reconstruct complete → C:\\FXION_RECON','t-green'],
+  ['[3/5] Repairing from FXION_2026-04-21_03-10-14.zip...','t-yellow'],
+  ['  → Expanded backup to %TEMP%\\FXION_RESTORE','t-muted'],
+  ['  → All modules present. No repair needed.','t-green'],
+  ['[3/5] Backup restore complete.','t-green'],
+  ['[4/5] Building FXION GPU engine...','t-yellow'],
+  ['  → Loading MSVC: vcvars64.bat','t-muted'],
+  ['  → nvcc fxion_pcie_engine.cu -O2 -o fxion_gpu.exe','t-cyan'],
+  ['  → GTX 970 BOOST: Clock locked at 1550MHz','t-cyan'],
+  ['  → Compiling CUDA kernels...','t-yellow'],
+  ['[Q8] UCB1 Policy: Q8_0 selected (UCB=0.94)','t-purple'],
+  ['[Q8] Accuracy: 99.1% · Throughput: 128.4 tok/s','t-purple'],
+  ['[Q8] VRAM: 3.8GB / 4.0GB (95% utilized)','t-yellow'],
+  ['  → fxion_gpu.exe build: IN PROGRESS...','t-yellow'],
+];
+
+let termIdx = 0;
+function addTerminalLine(text, cls='t-white') {
+  const el = document.getElementById('terminal');
+  const line = document.createElement('div');
+  line.className = cls;
+  line.textContent = '> ' + text;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function nextTermLine() {
+  if (termIdx < termLines.length) {
+    addTerminalLine(termLines[termIdx][0], termLines[termIdx][1]);
+    termIdx++;
+    setTimeout(nextTermLine, 120 + Math.random() * 200);
+  } else {
+    // blinking cursor
+    const el = document.getElementById('terminal');
+    const cur = document.createElement('span');
+    cur.className = 'cursor t-green';
+    cur.textContent = '█';
+    el.appendChild(cur);
+  }
+}
+
+// ─────────────────────────────────────────────
+// CLOCK & UPTIME
+// ─────────────────────────────────────────────
+const startTime = Date.now();
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toISOString().slice(0,19).replace('T',' ') + ' UTC';
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const h = String(Math.floor(elapsed/3600)).padStart(2,'0');
+  const m = String(Math.floor((elapsed%3600)/60)).padStart(2,'0');
+  const s = String(elapsed%60).padStart(2,'0');
+  document.getElementById('uptime').textContent = `${h}:${m}:${s}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ─────────────────────────────────────────────
+// LIVE METRIC ANIMATION
+// ─────────────────────────────────────────────
+function jitter(val, range) { return (val + (Math.random()-0.5)*range).toFixed(1); }
+setInterval(() => {
+  document.getElementById('tps').textContent = jitter(128.4, 3);
+  document.getElementById('acc').textContent = jitter(99.1, 0.2);
+  document.getElementById('vram').textContent = jitter(3.8, 0.05);
+  document.getElementById('ucb').textContent = jitter(0.94, 0.01);
+  document.getElementById('temp').textContent = Math.round(jitter(72, 2));
+  const gpuLoad = Math.round(70 + Math.random()*15);
+  document.getElementById('gpu-load').style.width = gpuLoad+'%';
+  document.getElementById('gpu-load-val').textContent = gpuLoad+'%';
+  document.getElementById('iters').textContent = parseInt(document.getElementById('iters').textContent) + Math.round(Math.random()*2);
+}, 1800);
+
+// ─────────────────────────────────────────────
+// PIPELINE SIMULATION
+// ─────────────────────────────────────────────
+let pipeState = 3; // currently step 4 active
+setTimeout(() => {
+  const steps = document.querySelectorAll('.pipe-step');
+  if (steps[3]) {
+    steps[3].classList.remove('active');
+    steps[3].classList.add('done');
+  }
+  if (steps[4]) {
+    steps[4].classList.remove('pending');
+    steps[4].classList.add('active');
+    addTerminalLine('[5/5] Finalizing → C:\\FXION_OMNITECH', 't-yellow');
+  }
+  setTimeout(() => {
+    if (steps[4]) {
+      steps[4].classList.remove('active');
+      steps[4].classList.add('done');
+      addTerminalLine('[5/5] OMNITECH REBUILT → C:\\FXION_OMNITECH', 't-green');
+      addTerminalLine('Running: python core\\run_model.py', 't-cyan');
+      addTerminalLine('=== MASTER REBUILD COMPLETE ===', 't-green');
+    }
+  }, 5000);
+}, 8000);
+
+// ─────────────────────────────────────────────
+// BENCHMARK
+// ─────────────────────────────────────────────
+function runBenchmark() {
+  addTerminalLine('[BENCH] Running Q8 augmented benchmark...', 't-purple');
+  quants.forEach((q, i) => {
+    setTimeout(() => {
+      addTerminalLine(`[BENCH] ${q.label}: ${q.tps} tok/s · ${q.acc}% acc · ${q.size}GB VRAM`, 
+        q.label==='Q8_0'?'t-green':'t-muted');
+    }, i*300);
+  });
+  setTimeout(() => {
+    addTerminalLine('[BENCH] Q8_0 confirmed OPTIMAL via UCB1 · score=0.94', 't-green');
+  }, quants.length*300);
+}
+
+function resetPolicy() {
+  addTerminalLine('[POLICY] Resetting UCB1 bandit state...', 't-yellow');
+  setTimeout(() => addTerminalLine('[POLICY] Exploration phase: all quants will be probed', 't-cyan'), 400);
+}
+
+// ─────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────
+function switchTab(id, groupClass, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+renderQ8Grid();
+renderPolicy();
+setTimeout(nextTermLine, 400);
+</script>
+</body>
+</html>

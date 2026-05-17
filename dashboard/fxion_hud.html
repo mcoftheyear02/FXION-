@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FXION-ONYX OMEGA HUD v2.0</title>
+    <style>
+        :root {
+            --neon-cyan: #00ffcc;
+            --neon-gold: #ff9900;
+            --neon-red: #ff3333;
+            --neon-green: #00ff66;
+            --bg-dark: #050505;
+            --panel-bg: rgba(10, 10, 10, 0.9);
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--neon-cyan);
+            font-family: 'Segoe UI', 'Roboto', 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .hud-container {
+            width: 1000px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: auto auto auto;
+            gap: 20px;
+            border: 2px solid var(--neon-cyan);
+            padding: 30px;
+            background: radial-gradient(circle at center, rgba(0, 255, 204, 0.05) 0%, transparent 70%);
+            box-shadow: 0 0 40px rgba(0, 255, 204, 0.1), inset 0 0 20px rgba(0, 255, 204, 0.05);
+            position: relative;
+        }
+
+        .header {
+            grid-column: span 3;
+            text-align: center;
+            font-size: 32px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 12px;
+            border-bottom: 2px solid var(--neon-cyan);
+            padding-bottom: 15px;
+            margin-bottom: 10px;
+            color: #fff;
+            text-shadow: 0 0 15px var(--neon-cyan), 0 0 30px var(--neon-cyan);
+        }
+
+        .panel {
+            border: 1px solid rgba(0, 255, 204, 0.3);
+            padding: 20px;
+            background: var(--panel-bg);
+            box-shadow: 4px 4px 0px var(--neon-cyan);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .panel-full { grid-column: span 3; }
+        .panel-half { grid-column: span 1; }
+
+        .label { 
+            color: #888; 
+            font-size: 11px; 
+            text-transform: uppercase; 
+            font-weight: bold;
+            margin-bottom: 5px;
+            letter-spacing: 2px;
+        }
+
+        .value { 
+            font-size: 26px; 
+            font-weight: bold;
+            color: var(--neon-cyan);
+            text-shadow: 0 0 5px var(--neon-cyan);
+        }
+
+        .vault-panel {
+            grid-column: span 2;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .btc-main {
+            grid-column: span 2;
+            font-size: 38px;
+            color: var(--neon-gold);
+            text-shadow: 0 0 10px var(--neon-gold);
+            margin-bottom: 10px;
+        }
+
+        .currency-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-left: 3px solid var(--neon-gold);
+        }
+
+        .bar-container {
+            width: 100%;
+            height: 12px;
+            background: #111;
+            margin-top: 10px;
+            border: 1px solid #333;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-green));
+            width: 0%;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 10px var(--neon-cyan);
+        }
+
+        .status-box {
+            text-align: center;
+            padding: 10px;
+            font-size: 20px;
+            letter-spacing: 4px;
+        }
+
+        .footer {
+            grid-column: span 3;
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #555;
+            margin-top: 15px;
+            border-top: 1px solid #222;
+            padding-top: 10px;
+        }
+
+        .scanline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, transparent 50%, rgba(0, 255, 204, 0.02) 51%, transparent 52%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        .active-pulse {
+            animation: pulse 2s infinite;
+        }
+        .dyson-panel {
+            grid-column: span 1;
+            border: 1px solid var(--neon-gold);
+            background: rgba(255, 153, 0, 0.05);
+        }
+
+        .synaptic-meter {
+            height: 60px;
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            margin-top: 10px;
+        }
+
+        .synaptic-bar {
+            flex: 1;
+            background: var(--neon-cyan);
+            box-shadow: 0 0 5px var(--neon-cyan);
+            min-height: 2px;
+        }
+
+        @keyframes scan {
+            from { top: -100%; }
+            to { top: 100%; }
+        }
+
+        .dyson-scanner {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: var(--neon-gold);
+            box-shadow: 0 0 10px var(--neon-gold);
+            top: -100%;
+            animation: scan 4s linear infinite;
+            z-index: 5;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="scanline"></div>
+    <div class="dyson-scanner"></div>
+    <div class="hud-container">
+        <div class="header">FXION-ONYX // DYSON NEURAL AI BIOS</div>
+        
+        <!-- ROW 1: VAULT -->
+        <div class="panel vault-panel">
+            <div class="btc-main">
+                <div class="label">Total Mined Balance</div>
+                <div id="btc-mined">0.00000000 BTC</div>
+            </div>
+            <div class="currency-box">
+                <div class="label">United States Dollar</div>
+                <div id="val-usd" class="value" style="color:var(--neon-green); text-shadow:none;">$0.00 USD</div>
+            </div>
+            <div class="currency-box">
+                <div class="label">Canadian Dollar</div>
+                <div id="val-cad" class="value" style="color:var(--neon-green); text-shadow:none;">$0.00 CAD</div>
+            </div>
+        </div>
+
+        <div class="panel vault-panel">
+            <div class="label">Wallet Address</div>
+            <div id="wallet-address" class="value" style="font-size:14px;">1FXION811654be4f8498f8d5929794047d</div>
+            <div class="label">Mining Status</div>
+            <div id="mining-status" class="value" style="color:var(--neon-gold);">IDLE</div>
+            <div class="label">Pool Status</div>
+            <div id="pool-status" class="value" style="color:var(--neon-cyan);">DISCONNECTED</div>
+            <div class="label">Shares Accepted</div>
+            <div id="shares-accepted" class="value" style="color:var(--neon-green);">0</div>
+        </div>
+
+        <div class="panel dyson-panel">
+            <div class="label">Synaptic Neural Load</div>
+            <div id="synaptic-load" class="value" style="color:var(--neon-gold);">8.712%</div>
+            <div class="synaptic-meter" id="synaptic-meter">
+                <div class="synaptic-bar" style="height: 20%;"></div>
+                <div class="synaptic-bar" style="height: 45%;"></div>
+                <div class="synaptic-bar" style="height: 30%;"></div>
+                <div class="synaptic-bar" style="height: 70%;"></div>
+                <div class="synaptic-bar" style="height: 55%;"></div>
+                <div class="synaptic-bar" style="height: 90%;"></div>
+                <div class="synaptic-bar" style="height: 40%;"></div>
+                <div class="synaptic-bar" style="height: 65%;"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="label">System Status</div>
+            <div id="status" class="value status-box active-pulse" style="color:var(--neon-green); font-size:18px;">OMEGA_STABLE</div>
+            <div class="label" style="margin-top:10px;">VRM Turbo Latency</div>
+            <div id="vrm-latency" class="value" style="color:var(--neon-gold); font-size:16px;">0.000ms</div>
+            <div class="label" style="margin-top:10px;">AI Mode / Security</div>
+            <div id="ai-mode" class="value" style="color:var(--neon-gold); font-size:16px;">HYPERACTIVE</div>
+            <div id="security-status" class="value" style="color:var(--neon-cyan); font-size:14px;">AES-256 PROTECTED</div>
+            <div class="label" style="margin-top:10px;">QI INFINITE (HyperLearning)</div>
+            <div id="qi-infinite" class="value" style="color:var(--neon-gold); font-size:16px;">QI: 0.0000</div>
+            <div class="label" style="margin-top:5px;">Qbits Processed / Decrypt</div>
+            <div id="qbits-total" class="value" style="color:var(--neon-cyan); font-size:14px;">Q: 0 | PROG: 0.0%</div>
+            <div class="label" style="margin-top:10px;">Self-Heal Engine</div>
+            <div id="heal-status" class="value" style="color:var(--neon-green); font-size:16px;">ACTIVE (NO RECENT HEALS)</div>
+            <div class="label" style="margin-top:10px;">Compute Backend</div>
+            <div id="active-backend" class="value" style="color:var(--neon-gold); font-size:22px;">VULKAN</div>
+            <div class="label" style="margin-top:10px;">Network Hashrate</div>
+            <div id="hashrate" class="value">0.00 KH/s</div>
+            <div id="hash-boost" class="label" style="color:var(--neon-green); margin-top:2px;">BOOST: x1.00</div>
+        </div>
+
+        <!-- ROW 2: QUANTUM & GPU -->
+        <div class="panel">
+            <div class="label">Quantum Coherence (PSI)</div>
+            <div id="psi" class="value">0.000000</div>
+            <div class="bar-container"><div id="psi-bar" class="bar-fill"></div></div>
+            <div class="label" style="margin-top:15px;">Coherence Level</div>
+            <div id="psi-percent" class="value" style="font-size:18px;">0.00%</div>
+        </div>
+
+        <div class="panel">
+            <div class="label">GPU Load (GTX 970)</div>
+            <div id="gpu-load" class="value">0%</div>
+            <div class="bar-container"><div id="gpu-bar" class="bar-fill"></div></div>
+            <div class="label" style="margin-top:15px;">Memory (VRAM)</div>
+            <div id="gpu-vram" class="value" style="font-size:18px;">0.00 / 4.00 GB</div>
+        </div>
+
+        <div class="panel">
+            <div class="label">GPU Temperature</div>
+            <div id="gpu-temp" class="value" style="font-size:32px;">0°C</div>
+            <div class="label" style="margin-top:15px;">Clock Speed</div>
+            <div id="gpu-clock" class="value" style="font-size:18px;">0 MHz</div>
+        </div>
+
+        <!-- ROW 3: CPU -->
+        <div class="panel panel-full" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+            <div>
+                <div class="label">CPU Compute Load</div>
+                <div id="cpu-load" class="value">0%</div>
+            </div>
+            <div>
+                <div class="label">System RAM Usage</div>
+                <div id="cpu-ram" class="value">0.0 GB</div>
+            </div>
+            <div>
+                <div class="label">Active Layers</div>
+                <div class="value">12 + 12 PHANTOM</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div>CORE: OMNITECH_FXION_v4.5.0</div>
+            <div>DEEP-HAL EVOLUTION: ACTIVE</div>
+            <div>[SECURE_VAULT_SYNC: OK]</div>
+        </div>
+    </div>
+
+    <script>
+        const statsEl = {
+            btc: document.getElementById('btc-mined'),
+            usd: document.getElementById('val-usd'),
+            cad: document.getElementById('val-cad'),
+            hash: document.getElementById('hashrate'),
+            psi: document.getElementById('psi'),
+            psiBar: document.getElementById('psi-bar'),
+            psiPct: document.getElementById('psi-percent'),
+            load: document.getElementById('gpu-load'),
+            gpuBar: document.getElementById('gpu-bar'),
+            vram: document.getElementById('gpu-vram'),
+            temp: document.getElementById('gpu-temp'),
+            clock: document.getElementById('gpu-clock'),
+            cpuLoad: document.getElementById('cpu-load'),
+            cpuRam: document.getElementById('cpu-ram'),
+            status: document.getElementById('status'),
+            backend: document.getElementById('active-backend'),
+            walletAddress: document.getElementById('wallet-address'),
+            miningStatus: document.getElementById('mining-status'),
+            poolStatus: document.getElementById('pool-status'),
+            sharesAccepted: document.getElementById('shares-accepted'),
+            healer: document.getElementById('heal-status'),
+            qi: document.getElementById('qi-infinite'),
+            qbits: document.getElementById('qbits-total'),
+            boost: document.getElementById('hash-boost'),
+            aiMode: document.getElementById('ai-mode'),
+            secStatus: document.getElementById('security-status'),
+            vrmLat: document.getElementById('vrm-latency'),
+            synLoad: document.getElementById('synaptic-load'),
+            synMeter: document.getElementById('synaptic-meter')
+        };
+
+        function updateSynapticMeter() {
+            const bars = statsEl.synMeter.children;
+            let totalHeight = 0;
+            for (let bar of bars) {
+                const h = Math.floor(Math.random() * 80) + 10;
+                bar.style.height = h + '%';
+                totalHeight += h;
+            }
+            const avg = (totalHeight / bars.length).toFixed(3);
+            statsEl.synLoad.innerText = avg + '%';
+        }
+
+        function updateHUD() {
+            updateSynapticMeter();
+            // Using ../dashboard/live_stats.json because HUD launcher serves from /dashboard or /
+            fetch('live_stats.json?t=' + Date.now())
+                .then(response => {
+                    if (!response.ok) throw new Error("File not found");
+                    return response.json();
+                })
+                .then(data => {
+                    statsEl.btc.innerText = data.total_mined || "0.00000000 BTC";
+                    statsEl.usd.innerText = data.balance_usd || "$0.00 USD";
+                    statsEl.cad.innerText = data.balance_cad || "$0.00 CAD";
+                    statsEl.hash.innerText = data.hashrate || "0.00 KH/s";
+                    statsEl.boost.innerText = "BOOST: " + (data.hash_boost || "x1.00");
+                    statsEl.walletAddress.innerText = data.wallet_address || "UNKNOWN";
+                    statsEl.miningStatus.innerText = data.mining_status || "IDLE";
+                    statsEl.poolStatus.innerText = data.pool_status || "DISCONNECTED";
+                    statsEl.sharesAccepted.innerText = data.shares_accepted != null ? data.shares_accepted : 0;
+                    
+                    statsEl.aiMode.innerText = data.ai_mode || "HYPERACTIVE";
+                    statsEl.secStatus.innerText = data.security_status || "PROTECTED";
+                    statsEl.vrmLat.innerText = data.turbo_latency || "0.000ms";
+                    statsEl.backend.innerText = data.active_backend || "VULKAN";
+                    
+                    statsEl.qi.innerText = "QI: " + (data.qi_infinite || 0.0).toFixed(4);
+                    statsEl.qbits.innerText = "Q: " + (data.qbits_total || 0) + " | PROG: " + (data.decrypt_progress || 0.0).toFixed(1) + "%";
+                    
+                    if (data.self_heal && data.self_heal.is_healing) {
+                        statsEl.healer.innerText = "HEALING IN PROGRESS...";
+                        statsEl.healer.style.color = "var(--neon-gold)";
+                    } else if (data.self_heal && data.self_heal.last_heal !== "NONE") {
+                        statsEl.healer.innerText = "LAST REPAIR: " + data.self_heal.last_heal;
+                        statsEl.healer.style.color = "var(--neon-cyan)";
+                    } else {
+                        statsEl.healer.innerText = "ACTIVE (NOMINAL)";
+                        statsEl.healer.style.color = "var(--neon-green)";
+                    }
+
+                    if (data.savior_fitness) {
+                        statsEl.savior.innerText = "FITNESS: " + data.savior_fitness;
+                    }
+                    
+                    const psiVal = data.psi || 0;
+                    statsEl.psi.innerText = psiVal.toFixed(6);
+                    statsEl.psiPct.innerText = (psiVal * 100).toFixed(2) + "%";
+                    statsEl.psiBar.style.width = (psiVal * 100) + '%';
+                    
+                    if (data.gpu) {
+                        statsEl.load.innerText = data.gpu.load + '%';
+                        statsEl.gpuBar.style.width = data.gpu.load + '%';
+                        statsEl.vram.innerText = data.gpu.vram_used.toFixed(2) + " / 4.00 GB";
+                        statsEl.temp.innerText = data.gpu.temp + '°C';
+                        statsEl.clock.innerText = data.gpu.clock_mhz + ' MHz';
+                        
+                        // Color coding temperature
+                        if (data.gpu.temp > 80) statsEl.temp.style.color = "#ff3333";
+                        else if (data.gpu.temp > 70) statsEl.temp.style.color = "#ff9900";
+                        else statsEl.temp.style.color = "#00ffcc";
+                    }
+
+                    if (data.cpu) {
+                        statsEl.cpuLoad.innerText = data.cpu.load + '%';
+                        statsEl.cpuRam.innerText = data.cpu.ram_used.toFixed(1) + " / " + data.cpu.ram_total.toFixed(1) + " GB";
+                    }
+                    
+                    statsEl.status.innerText = data.status || "OMEGA_OFFLINE";
+                    if (data.status === "OMEGA_STABLE") {
+                        statsEl.status.style.color = "#00ff66";
+                        statsEl.status.style.textShadow = "0 0 10px #00ff66";
+                    } else {
+                        statsEl.status.style.color = "#ff3333";
+                        statsEl.status.style.textShadow = "0 0 10px #ff3333";
+                    }
+                })
+                .catch(err => {
+                    console.error("HUD Sync Error:", err);
+                    statsEl.status.innerText = "HUD_DISCONNECTED";
+                    statsEl.status.style.color = "#ff3333";
+                });
+        }
+        setInterval(updateHUD, 2000);
+        updateHUD();
+    </script>
+</body>
+</html>

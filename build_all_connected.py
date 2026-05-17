@@ -272,6 +272,23 @@ class BuildAllConnected:
             self.cortex_bridge.ingest_iq4_nl("LAN", test_data)
             ok("End-to-end signal test: LAN -> Cortex -> Oberon Mind PASSED")
 
+            # Activate ZTDS AVX512 hybrid mode: Q8_0 + IQ2_XS via Cortex A-72
+            if self.fxion_engine:
+                ztds_result = self.fxion_engine.activate_ztds_avx512(
+                    cortex_bridge=self.cortex_bridge
+                )
+                if ztds_result.get("status") == "ACTIVE":
+                    # Run a ZTDS hybrid inference to confirm
+                    ztds_infer = self.fxion_engine.infer_ztds(
+                        "ZTDS AVX512 Cortex A-72 validation", max_tokens=64
+                    )
+                    ok(f"ZTDS AVX512 ACTIVE: Q8_0+IQ2_XS | "
+                       f"TPS={ztds_result['fused_tps']} | "
+                       f"ACC={ztds_result['fused_accuracy']} | "
+                       f"Cortex=ROUTED")
+                else:
+                    warn(f"ZTDS AVX512: {ztds_result}")
+
         except Exception as e:
             fail(f"Neural wiring: {e}")
             logger.error(f"Neural wiring failed: {e}")
@@ -710,11 +727,21 @@ CONNECTED_DASHBOARD_HTML = """
                 // FXION Engine
                 const fe = d.fxion_engine;
                 if (fe) {
-                    document.getElementById('fxion_engine').innerHTML =
+                    let feHtml =
                         stat('GPU', fe.gpu?.name || 'N/A') +
                         stat('Active Quant', fe.active_quant) +
                         stat('Sessions', fe.sessions) +
                         stat('Avg TPS', fe.avg_tps);
+                    if (fe.ztds) {
+                        feHtml +=
+                            stat('ZTDS Mode', fe.ztds.fusion_mode) +
+                            stat('CPU Backend', fe.ztds.cpu_backend) +
+                            stat('Split Ratio', (fe.ztds.split_ratio * 100) + '%') +
+                            stat('Fused TPS', fe.ztds.fused_tps) +
+                            stat('Fused ACC', fe.ztds.fused_accuracy) +
+                            stat('Cortex Routed', fe.ztds.cortex_routed ? 'YES' : 'NO');
+                    }
+                    document.getElementById('fxion_engine').innerHTML = feHtml;
                 }
 
                 // HMAC Shield

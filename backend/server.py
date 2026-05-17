@@ -23,6 +23,7 @@ from fxion.nnox_scheduler import NNOXScheduler
 from fxion.onyx_runtime import ONYXRuntime
 from fxion import qint_int2, ztds_entropy, xyz_elliptic, neuron_bridge, quantum_entropy
 from fxion import qint_levels, qi_neuronbridge, deep_learn_sdk, elliptic_seismo, hard_compress
+from fxion import hyperlearn
 
 # MongoDB
 mongo_url = os.environ['MONGO_URL']
@@ -392,6 +393,42 @@ async def ztds_deep(req: ZtdsDeepReq):
         "plaintext_entropy_bits": round(ztds_entropy.shannon_entropy(pt), 4),
         "ciphertext_entropy_bits": round(ztds_entropy.shannon_entropy(ct), 4),
     }
+
+
+# ────────── HYPERLEARN · XOR-on-Success ──────────
+class HyperReq(BaseModel):
+    epochs: int = 30
+    backend: str = "AVX512"
+    lr: float = 0.04
+    weight_dim: int = 512
+    seed: int = 42
+
+
+@api.post("/hyperlearn/run")
+async def hyperlearn_run(req: HyperReq):
+    return hyperlearn.run(
+        epochs=max(4, min(req.epochs, 200)),
+        backend=req.backend,
+        lr=max(0.001, min(req.lr, 0.5)),
+        weight_dim=max(32, min(req.weight_dim, 4096)),
+        seed=req.seed,
+    )
+
+
+class HyperCompareReq(BaseModel):
+    epochs: int = 30
+    weight_dim: int = 512
+    seed: int = 42
+
+
+@api.post("/hyperlearn/compare")
+async def hyperlearn_compare(req: HyperCompareReq):
+    return hyperlearn.compare(
+        epochs=max(4, min(req.epochs, 200)),
+        weight_dim=max(32, min(req.weight_dim, 4096)),
+        seed=req.seed,
+    )
+
 
 
 app.include_router(api)

@@ -1,42 +1,49 @@
-# FXION-ONYX · OMNITECH Q8 Engine — PRD
+# FXION-ONYX · OMNITECH Q8 Engine — PRD (Jan 2026)
 
 ## Original Problem Statement
-> "BUILD THIS TO EXPERIMENTAL QINT COMPRESSION EN INT2 ZTDS EN ENTROPIE DYNAMIQUE XOR ET ALGEBRIQUE
-> MATHEMATHIQUE ALGORITHM X/Y/Z AXIAL ELLIPTIQUE CYBERSECURITY CONFIGURATION NEURONBRIDGE
-> CONFIGURATION QUANTUM ENTROPIE CRYPTOGRAPHIQUE EXPERIMENTAL COMPRESSION ALGORTIHM"
->
-> Source artefact: `FXION-ONYX-final-MERGED-IQ.zip` (Python Q8 Augmented Quantization Engine + NeuronBridge 8.712 Quantum Genesis config).
+> Source: `FXION-ONYX-final-MERGED-IQ.zip` (Q8 Augmented Quantization Engine + NeuronBridge 8.712).
+> Extensions requested across sessions: QINT INT2/4/8 compression, ZTDS dynamic XOR + algebraic entropy, X/Y/Z axial elliptic cybersecurity, NeuronBridge config, quantum cryptographic entropy, QI NeuronBridge per-layer entropy, Deep-Learn SDK dynamic entropic graph, elliptic seismograph wave, HARD compression with XOR prefetch hash chain, real-time live polling, snapshots, HyperLearn epochs with XOR-on-Success across AVX512 / Cortex A72.
 
 ## Architecture
-- **Backend** FastAPI (`/app/backend/server.py`) wrapping the FXION-ONYX Python modules in `/app/backend/fxion/`:
+- **Backend** FastAPI (`/app/backend/server.py`), Python modules in `/app/backend/fxion/`:
   - Original: `system_class`, `qfx_optimizer`, `nnox_scheduler`, `onyx_runtime`, `core/qfx_quant`
-  - **New experimental**: `qint_int2` (INT2 2-bit weight compression), `ztds_entropy` (XOR + GF(2⁸) algebraic stream), `xyz_elliptic` (secp256k1 tri-axial ECDH), `quantum_entropy` (SHA3-512 sponge + Von-Neumann debias), `neuron_bridge` (parses `neuronbridge.cfg`)
-- **Frontend** React Command Center (`/app/frontend/src/App.js`) — dark amber-on-black cyberpunk dashboard, JetBrains Mono, Recharts (Radar + Bar + Line), live module status pills.
-- **Storage** MongoDB collection `fxion_runs` (event history of resets and pipeline runs).
+  - V2 experimental: `qint_int2`, `qint_levels` (2/4/8), `ztds_entropy`, `xyz_elliptic`, `quantum_entropy`, `neuron_bridge`, `qi_neuronbridge`, `deep_learn_sdk`, `elliptic_seismo`, `hard_compress`, `hyperlearn`
+- **Frontend** React Command Center (`/app/frontend/src/App.js`) — dark amber-on-black JetBrains Mono, Recharts (Radar/Bar/Line/Scatter), 15 module pills, live TPS strip, snapshot tiles.
+- **Storage** MongoDB: `fxion_runs` (pipeline events) + `fxion_snapshots` (full state captures).
 
 ## API surface (`/api`)
-- `GET /` · `GET /manifest` · `GET /system/status`
-- `POST /system/gpu-loop` · `POST /system/reset`
-- `POST /qfx/optimize` · `GET /qfx/profiles`
-- `POST /nnox/route` · `POST /onyx/run`
-- `POST /qint/compress` · `POST /ztds/encrypt`
-- `GET  /xyz/handshake` · `POST /xyz/sign`
-- `GET  /neuronbridge/config` · `GET /neuronbridge/summary`
-- `POST /quantum/entropy`
-- `POST /pipeline/run-all` (unified pipeline) · `GET /pipeline/history`
+Core: `/`, `/manifest`, `/system/status`, `/system/gpu-loop`, `/system/reset`
+QFX: `/qfx/optimize`, `/qfx/profiles`
+NNOX: `/nnox/route`
+ONYX: `/onyx/run`
+QINT: `/qint/compress`, `/qint/bench-all`
+ZTDS: `/ztds/encrypt`, `/ztds/deep`
+X/Y/Z: `/xyz/handshake`, `/xyz/sign`
+NeuronBridge: `/neuronbridge/config`, `/neuronbridge/summary`, `/qi/neuronbridge`
+Deep: `/deep/forward`
+Elliptic: `/elliptic/seismo`
+HARD: `/hard/roundtrip`
+HyperLearn: `/hyperlearn/run`, `/hyperlearn/compare`
+Pipeline: `/pipeline/run-all`, `/pipeline/history`
+Snapshot: `/snapshot/save`, `/snapshot/list`, `/snapshot/{id}`, `/snapshot/{id}` (DELETE)
+Live: `/live/tick`
 
-## Implemented (2026-01-16)
-- 11/11 FXION modules wired into FastAPI and exposed.
-- 5 NEW experimental modules added per the French/English brief (QINT INT2, ZTDS XOR + algebraic, X/Y/Z axial elliptic, NeuronBridge config loader, Quantum cryptographic entropy).
-- Command Center UI with 12 panels, live charts, run-all pipeline, MongoDB-persisted history.
-- End-to-end validated via curl + Playwright screenshots — pipeline executes in ~0.6s, every module reports.
+## Implemented (2026-01-16/17)
+- 15 modules wired into the connected pipeline
+- Full Q8 quant policy, INT4 + IQ importance-matrix + INT2/INT4/INT8 unified bench
+- Tri-axial secp256k1 ECDH handshake with COHERENT digest
+- Dynamic entropic neural graph + Lissajous elliptic wave seismograph
+- HARD compression chain (RLE → XOR → DEFLATE → BLAKE2b) with tamper hash chain
+- HyperLearn epoch loop with **XOR-on-Success** mask 0x5A across **AVX512 (3.76× faster)** and **Cortex A72** backends
+- Real-time polling via `/api/live/tick` (3s interval) — best quant evolves, ψ-coherence updates
+- Snapshot save/load to MongoDB with 8-char IDs and tile UI
 
-## Backlog / Next
-- P1: live WebSocket telemetry stream (replace polling).
-- P1: CUDA kernel (`fxion_pcie_engine.cu`) build & invocation when GPU available.
-- P2: persist QFX bandit state to MongoDB across restarts.
-- P2: dashboard mode-selector (14 PowerShell modes — q8, neural, qfx, turbo, bench, scan, status, safe, api, docker, rebuild, install, menu, start).
-- P3: import the original HTML dashboards (`omnitech_q8_dashboard.html`) as a "legacy" tab.
+## Pending / Backlog
+- P0: clarify Bitcoin wallet requirement (user requested mainnet but did not confirm safe option). MUST NOT build mainnet tx wallet without explicit (a) integration choice, (b) keys, (c) risk acknowledgement.
+- P1: WebSocket telemetry stream
+- P1: CUDA kernel build of `fxion_pcie_engine.cu`
+- P2: Persist UCB1 bandit state across restarts
+- P2: 14-mode selector (q8 / neural / turbo / bench / scan / safe / docker / rebuild …)
 
 ## Test Credentials
-N/A — no auth in this build (all endpoints are open command surface).
+N/A — no auth.

@@ -86,6 +86,9 @@ const CommandCenter = () => {
   const [seismo, setSeismo] = useState(null);
   const [hardR, setHardR] = useState(null);
   const [ztdsDeep, setZtdsDeep] = useState(null);
+  const [hyperAVX, setHyperAVX] = useState(null);
+  const [hyperARM, setHyperARM] = useState(null);
+  const [hyperCompare, setHyperCompare] = useState(null);
   const [live, setLive] = useState(false);
   const [liveTick, setLiveTick] = useState(null);
   const [lastSync, setLastSync] = useState(null);
@@ -179,6 +182,16 @@ const CommandCenter = () => {
   const runHard = async () => { set("hard", 1); try { const r = await axios.post(`${API}/hard/roundtrip`, {}); setHardR(r.data); } finally { set("hard", 0); } };
   const runZtdsDeep = async () => { set("ztdsd", 1); try { const r = await axios.post(`${API}/ztds/deep`, { message, rounds: 4 }); setZtdsDeep(r.data); } finally { set("ztdsd", 0); } };
 
+  const runHyperCompare = async () => {
+    set("hyper", 1);
+    try {
+      const r = await axios.post(`${API}/hyperlearn/compare`, { epochs: 40, weight_dim: 256 });
+      setHyperCompare(r.data);
+      setHyperAVX(r.data.avx512);
+      setHyperARM(r.data.cortex_a72);
+    } finally { set("hyper", 0); }
+  };
+
   const runAll = async () => {
     set("all", 1);
     try {
@@ -233,6 +246,7 @@ const CommandCenter = () => {
     { name: "elliptic_seismo",ok: !!seismo,   icon: Waves },
     { name: "hard_compress",  ok: !!hardR,    icon: Package },
     { name: "qint_levels",    ok: !!qintBench,icon: Gauge },
+    { name: "hyperlearn",     ok: !!hyperAVX, icon: Brain },
   ];
   const connectedCount = modulesConnected.filter(m => m.ok).length;
 
@@ -717,6 +731,104 @@ const CommandCenter = () => {
             ) : <p className="text-xs text-zinc-600 mt-4">Run deep ZTDS encryption.</p>}
           </Panel>
         </div>
+
+        {/* HYPERLEARN · XOR-on-Success */}
+        <Panel
+          icon={Brain}
+          title="HyperLearn Epoch · XOR-on-Success"
+          subtitle="AVX512 ⚡ vs Cortex-A72 · XOR-mix when reward > 0.72"
+          testid="hyperlearn-panel"
+        >
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-[11px] text-zinc-500 font-mono">
+              Each epoch trains weights toward target; on success, INT8-quantized weights are XOR-mixed with mask 0x5A and damped 5% back.
+            </p>
+            <Btn onClick={runHyperCompare} busy={busy.hyper} testid="run-hyper-btn">Run 40 epochs · both backends</Btn>
+          </div>
+
+          {hyperAVX && hyperARM ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-2">
+              {/* AVX512 column */}
+              <div className="border border-emerald-500/20 bg-emerald-500/5 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] uppercase tracking-widest text-emerald-300 font-mono">AVX512</span>
+                  <span className="text-[10px] text-zinc-500">{hyperAVX.backend_label}</span>
+                </div>
+                <div className="text-[10px] font-mono space-y-1">
+                  <div className="flex justify-between"><span className="text-zinc-500">vector</span><span>{hyperAVX.backend_profile.vector_width}-bit</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">fp16</span><span>{hyperAVX.backend_profile.fp16_tflops} TFLOPs</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">int8</span><span>{hyperAVX.backend_profile.int8_tops} TOPs</span></div>
+                  <div className="flex justify-between border-t border-zinc-900 pt-1 mt-1"><span className="text-zinc-500">success</span><span className="text-emerald-300">{hyperAVX.successes}/{hyperAVX.epochs} · {(hyperAVX.success_rate*100).toFixed(0)}%</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">xor applied</span><span className="text-amber-300">{hyperAVX.xor_applied}</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">best reward</span><span>{hyperAVX.best_reward}</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">sim total</span><span>{hyperAVX.sim_total_ms} ms</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">throughput</span><span>{hyperAVX.throughput_epochs_per_s} ep/s</span></div>
+                </div>
+                <div className="text-[9px] font-mono text-zinc-600 mt-2 break-all border-t border-zinc-900 pt-1">
+                  fp: {hyperAVX.weight_fingerprint_blake2b_128}
+                </div>
+              </div>
+
+              {/* Chart middle */}
+              <div className="border border-zinc-800 p-3">
+                <div className="text-[11px] uppercase tracking-widest text-amber-300 font-mono mb-2">Reward Curve · XOR markers</div>
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart>
+                      <CartesianGrid stroke="#18181b" strokeDasharray="2 2"/>
+                      <XAxis dataKey="epoch" type="number" domain={[0, hyperAVX.epochs - 1]} tick={{ fill: "#71717a", fontSize: 9 }} allowDuplicatedCategory={false}/>
+                      <YAxis domain={[0, 1]} tick={{ fill: "#71717a", fontSize: 9 }}/>
+                      <Tooltip contentStyle={{ background: "#09090b", border: "1px solid #27272a", fontSize: 11 }}/>
+                      <Line type="monotone" dataKey="reward" data={hyperAVX.trace} stroke="#10b981" strokeWidth={2} dot={false} name="AVX512"/>
+                      <Line type="monotone" dataKey="reward" data={hyperARM.trace} stroke="#06b6d4" strokeWidth={2} dot={false} strokeDasharray="4 2" name="Cortex A72"/>
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-2 flex justify-between text-[10px] font-mono text-zinc-500">
+                  <span>━ AVX512</span>
+                  <span className="text-cyan-400">┄ Cortex A72</span>
+                  <span>threshold ψ {hyperAVX.success_threshold}</span>
+                </div>
+              </div>
+
+              {/* ARM column */}
+              <div className="border border-cyan-500/20 bg-cyan-500/5 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] uppercase tracking-widest text-cyan-300 font-mono">CORTEX A72</span>
+                  <span className="text-[10px] text-zinc-500">{hyperARM.backend_label}</span>
+                </div>
+                <div className="text-[10px] font-mono space-y-1">
+                  <div className="flex justify-between"><span className="text-zinc-500">vector</span><span>{hyperARM.backend_profile.vector_width}-bit NEON</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">fp16</span><span>{hyperARM.backend_profile.fp16_tflops} TFLOPs</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">int8</span><span>{hyperARM.backend_profile.int8_tops} TOPs</span></div>
+                  <div className="flex justify-between border-t border-zinc-900 pt-1 mt-1"><span className="text-zinc-500">success</span><span className="text-cyan-300">{hyperARM.successes}/{hyperARM.epochs} · {(hyperARM.success_rate*100).toFixed(0)}%</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">xor applied</span><span className="text-amber-300">{hyperARM.xor_applied}</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">best reward</span><span>{hyperARM.best_reward}</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">sim total</span><span>{hyperARM.sim_total_ms} ms</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">throughput</span><span>{hyperARM.throughput_epochs_per_s} ep/s</span></div>
+                </div>
+                <div className="text-[9px] font-mono text-zinc-600 mt-2 break-all border-t border-zinc-900 pt-1">
+                  fp: {hyperARM.weight_fingerprint_blake2b_128}
+                </div>
+              </div>
+
+              {hyperCompare && (
+                <div className="lg:col-span-3 border-t border-zinc-900 pt-3 mt-1 flex justify-between text-[11px] font-mono">
+                  <span className="text-zinc-500">▶ AVX512 speedup vs A72</span>
+                  <span className="text-amber-300 text-base">{hyperCompare.speedup_vs_arm}×</span>
+                  <span className="text-zinc-500">Δ success rate</span>
+                  <span>{(hyperCompare.delta_success_rate*100).toFixed(2)}%</span>
+                  <span className="text-zinc-500">Δ best reward</span>
+                  <span>{hyperCompare.delta_best_reward}</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-600 mt-4">
+              Click to run 40 epochs on both backends. Successful epochs trigger XOR-mix on INT8-quantized weights (mask 0x5A).
+            </p>
+          )}
+        </Panel>
 
         {/* SNAPSHOTS */}
         <Panel icon={KeySquare} title="Reel Snapshots · MongoDB persisted" subtitle={`${snapshots.length} captured · click to restore dashboard state`} testid="snapshots-panel">

@@ -98,6 +98,7 @@ const CommandCenter = () => {
   const [showSrc, setShowSrc] = useState(false);
   const [fusion, setFusion] = useState(null);
   const [cotrain, setCotrain] = useState(null);
+  const [hyperPrimary, setHyperPrimary] = useState(null);
   const [live, setLive] = useState(false);
   const [liveTick, setLiveTick] = useState(null);
   const [lastSync, setLastSync] = useState(null);
@@ -227,6 +228,16 @@ const CommandCenter = () => {
       const r = await axios.post(`${API}/cotrain/run`, { epochs: 40, sync_every: 8, weight_dim: 256, apply_pcie: true });
       setCotrain(r.data);
     } finally { set("cotrain", 0); }
+  };
+
+  const runHyperPrimary = async () => {
+    set("hprim", 1);
+    try {
+      const r = await axios.post(`${API}/hyperlearn/primary`, {
+        start_layer: 6, end_layer: 12, quant: "IQ2_XS", epochs: 30, weight_dim: 128
+      });
+      setHyperPrimary(r.data);
+    } finally { set("hprim", 0); }
   };
 
   // auto-load fusion on mount
@@ -861,6 +872,99 @@ const CommandCenter = () => {
             <p className="text-xs text-zinc-600 mt-4">Computing merged lanes…</p>
           )}
         </Panel>
+
+        {/* HYPERLEARN PRIMARY · LAYER 6-12 IQ2_XS */}
+        <Panel
+          icon={Brain}
+          title="HyperLearn PRIMARY · Layer-Active"
+          subtitle="L06 → L12 · IQ2_XS · 84 bridges · XOR-on-success mask 0x5A"
+          testid="hyper-primary-panel"
+        >
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-[11px] text-zinc-500 font-mono">
+              HyperLearn promoted to PRIMARY on 7 layers (L06 CPU·AVX512 + L07–L12 GPU·CUDA_FP16), 12 bridges each, with <span className="text-emerald-300">IQ2_XS</span> as active quant.
+            </p>
+            <Btn onClick={runHyperPrimary} busy={busy.hprim} testid="run-hyper-primary-btn">Run 30 epochs · 84 bridges</Btn>
+          </div>
+
+          {hyperPrimary ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 border border-amber-500/20 bg-amber-500/5 p-3">
+                <div><div className="text-[10px] text-zinc-500 uppercase">Quant</div><div className="text-emerald-300 text-lg font-mono">{hyperPrimary.quant}</div></div>
+                <div><div className="text-[10px] text-zinc-500 uppercase">Range</div><div className="text-amber-300 text-lg font-mono">L{String(hyperPrimary.start_layer).padStart(2,'0')}..L{String(hyperPrimary.end_layer).padStart(2,'0')}</div></div>
+                <div><div className="text-[10px] text-zinc-500 uppercase">Bridges</div><div className="text-zinc-200 text-lg font-mono">{hyperPrimary.bridges_total}</div></div>
+                <div><div className="text-[10px] text-zinc-500 uppercase">XOR Applied</div><div className="text-fuchsia-400 text-lg font-mono">{hyperPrimary.xor_total}</div></div>
+                <div><div className="text-[10px] text-zinc-500 uppercase">Grand Avg</div><div className="text-zinc-100 text-lg font-mono">{hyperPrimary.grand_avg_final_reward}</div></div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="border border-amber-500/30 p-3">
+                  <div className="text-[10px] text-amber-300 uppercase tracking-widest mb-1">CPU·AVX512 ({hyperPrimary.cpu_layers}L)</div>
+                  <div className="text-zinc-200 text-2xl font-mono">{hyperPrimary.cpu_avg_reward}</div>
+                </div>
+                <div className="border border-emerald-500/30 bg-emerald-500/5 p-3">
+                  <div className="text-[10px] text-emerald-300 uppercase tracking-widest mb-1">★ Best Layer</div>
+                  <div className="text-emerald-200 text-2xl font-mono">L{String(hyperPrimary.best_layer).padStart(2,'0')}</div>
+                  <div className="text-zinc-500 text-[10px]">{hyperPrimary.best_layer_reward} reward</div>
+                </div>
+                <div className="border border-cyan-500/30 p-3">
+                  <div className="text-[10px] text-cyan-300 uppercase tracking-widest mb-1">GPU·CUDA_FP16 ({hyperPrimary.gpu_layers}L)</div>
+                  <div className="text-zinc-200 text-2xl font-mono">{hyperPrimary.gpu_avg_reward}</div>
+                </div>
+              </div>
+
+              <div className="border border-zinc-800 p-3">
+                <div className="text-[11px] uppercase tracking-widest text-amber-300 font-mono mb-2">Reward Curves · per layer</div>
+                <div className="h-[240px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart>
+                      <CartesianGrid stroke="#18181b" strokeDasharray="2 2"/>
+                      <XAxis dataKey="epoch" type="number" domain={[0, hyperPrimary.epochs - 1]} tick={{ fill: "#71717a", fontSize: 9 }}/>
+                      <YAxis domain={[0, 1]} tick={{ fill: "#71717a", fontSize: 9 }}/>
+                      <Tooltip contentStyle={{ background: "#09090b", border: "1px solid #27272a", fontSize: 11 }}/>
+                      {hyperPrimary.layers.map((l, i) => {
+                        const palette = ["#fbbf24","#10b981","#06b6d4","#3b82f6","#a78bfa","#f472b6","#e879f9"];
+                        const color = l.backend.startsWith("CPU") ? "#fbbf24" : palette[(i + 1) % palette.length];
+                        return (
+                          <Line key={l.layer} type="monotone" dataKey="avg_reward" data={l.trace}
+                            stroke={color}
+                            strokeWidth={l.layer === hyperPrimary.best_layer ? 3 : 1.5}
+                            dot={false} name={`L${String(l.layer).padStart(2,'0')}`}/>
+                        );
+                      })}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+                {hyperPrimary.layers.map(l => (
+                  <div key={l.layer} data-testid={`hprim-layer-${l.layer}`}
+                    className={`border p-2 text-[10px] font-mono ${
+                      l.layer === hyperPrimary.best_layer
+                        ? "border-amber-400/70 bg-amber-500/10"
+                        : (l.backend.startsWith("CPU") ? "border-amber-500/20" : "border-cyan-500/20")
+                    }`}>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-zinc-500">L{String(l.layer).padStart(2,'0')}</span>
+                      <span className={l.backend.startsWith("CPU") ? "text-amber-300" : "text-cyan-400"}>
+                        {l.backend.startsWith("CPU") ? "CPU" : "GPU"}
+                      </span>
+                    </div>
+                    <div className="text-emerald-300 mb-1">{l.quant}</div>
+                    <div className="text-zinc-500">succ: <span className="text-zinc-200">{l.total_successes}/{l.bridges*l.epochs}</span></div>
+                    <div className="text-zinc-500">xor: <span className="text-fuchsia-300">{l.xor_applied}</span></div>
+                    <div className="text-zinc-500">avg: <span className="text-zinc-100">{l.final_avg_reward}</span></div>
+                    <div className="text-zinc-500">best: <span className="text-zinc-100">{l.final_best_reward}</span></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-600 mt-4">Click to activate HyperLearn as PRIMARY on layers L06 → L12 with IQ2_XS. 7 layers × 12 bridges × 30 epochs = 2520 bandit pulls.</p>
+          )}
+        </Panel>
+
 
         {/* CO-TRAINING AVX512 ↔ CORTEX A72 with IQ quants */}
         <Panel

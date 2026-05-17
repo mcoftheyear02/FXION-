@@ -27,6 +27,7 @@ from fxion import hyperlearn
 from fxion import fxion_pcie_simulator
 from fxion import qfusion
 from fxion import cotrain
+from fxion import hyperlearn_primary
 
 # MongoDB
 mongo_url = os.environ['MONGO_URL']
@@ -492,6 +493,29 @@ async def cotrain_run(req: CotrainReq):
         seed=req.seed,
         apply_pcie=req.apply_pcie,
     )
+
+
+# ────────── HYPERLEARN PRIMARY · layer-active ──────────
+class HyperPrimaryReq(BaseModel):
+    start_layer: int = 6
+    end_layer: int = 12
+    quant: str = "IQ2_XS"
+    epochs: int = 30
+    weight_dim: int = 128
+    seed: int = 42
+
+
+@api.post("/hyperlearn/primary")
+async def hyperlearn_primary_run(req: HyperPrimaryReq):
+    return hyperlearn_primary.run(
+        start_layer=req.start_layer,
+        end_layer=req.end_layer,
+        quant=req.quant,
+        epochs=req.epochs,
+        weight_dim=req.weight_dim,
+        seed=req.seed,
+    )
+
 
     return qfusion.all_merges()
 

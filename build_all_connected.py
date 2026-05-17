@@ -94,6 +94,7 @@ class BuildAllConnected:
         self.cortex_bridge = None
         self.oberon_mind = None
         self.lone_road = None
+        self.phantom_split = None
         self.flask_app = None
 
         # Status tracking
@@ -111,6 +112,7 @@ class BuildAllConnected:
             "CORTEX_A72":       False,
             "OBERON_MIND":      False,
             "LONE_ROAD":        False,
+            "PHANTOM_SPLIT":    False,
             "API_DASHBOARD":    False,
         }
 
@@ -165,10 +167,10 @@ class BuildAllConnected:
             logger.error(f"ONYX boot failed: {e}")
 
     # ==========================================================================
-    #  STEP 3: FXION Module (Engine + Quantizer + PCIe)
+    #  STEP 3: FXION Module (Engine + Quantizer + PCIe + PhantomSplit)
     # ==========================================================================
     def _boot_fxion_module(self):
-        step(3, self.TOTAL_STEPS, "Loading FXION Module (Engine + Quantizer + PCIe)...")
+        step(3, self.TOTAL_STEPS, "Loading FXION Module (Engine + Quantizer + PCIe + PhantomSplit)...")
         try:
             from fxion.engine import FXIONEngine
             self.fxion_engine = FXIONEngine(vram_budget_gb=4.0)
@@ -198,6 +200,28 @@ class BuildAllConnected:
             ok(f"PCIeBridge: {self.pcie_bridge.status()['pcie']} | kernel={self.pcie_bridge.status()['kernel_binary']}")
         except Exception as e:
             warn(f"PCIeBridge: {e}")
+
+        # Activate GPU/CPU Phantom Split
+        try:
+            from phantom_split import PhantomSplit
+            self.phantom_split = PhantomSplit({
+                "mode": "CPU_GPU_PARALLEL",
+                "cpu_layers": "1-12",
+                "gpu_layers": "1-12",
+                "cpu_backend": "AVX512",
+                "gpu_backend": "CUDA_FP16",
+                "phantom_pairing": "1:1",
+                "sync_protocol": "PHANTOM_BRIDGE_v2",
+            })
+            dist = self.phantom_split.distribute(total_layers=12)
+            self.layers["PHANTOM_SPLIT"] = True
+            ps = self.phantom_split.status()
+            ok(f"PhantomSplit ACTIVE: {ps['mode']} | "
+               f"CPU={ps['cpu_primary_layers']} GPU={ps['gpu_primary_layers']} | "
+               f"Virtual={ps['virtual_layers']} layers | {ps['cpu_backend']}/{ps['gpu_backend']}")
+        except Exception as e:
+            warn(f"PhantomSplit: {e}")
+            logger.warning(f"PhantomSplit: {e}")
 
     # ==========================================================================
     #  STEP 4: IQ4_NL Security Layer (L0 Oberon + HMAC Shield)
@@ -391,6 +415,12 @@ class BuildAllConnected:
         if self.oberon_mind:
             status["oberon_mind"] = self.oberon_mind.get_status()
 
+        # Phantom Split (GPU/CPU)
+        if self.phantom_split:
+            ps_status = self.phantom_split.status()
+            ps_status.pop("distribution", None)
+            status["phantom_split"] = ps_status
+
         return status
 
     # ==========================================================================
@@ -457,6 +487,7 @@ class BuildAllConnected:
         print(f"    Cortex A-72     : {'ACTIVE' if self.layers['CORTEX_A72'] else 'FAILED'}")
         print(f"    Oberon Mind     : {'ACTIVE' if self.layers['OBERON_MIND'] else 'FAILED'}")
         print(f"    Lone Road       : {'ACTIVE' if self.layers['LONE_ROAD'] else 'FAILED'}")
+        print(f"    Phantom Split   : {'ACTIVE' if self.layers['PHANTOM_SPLIT'] else 'FAILED'}")
         print(f"    API Dashboard   : {'ACTIVE' if self.layers['API_DASHBOARD'] else 'SKIPPED'}")
 
         if self.layers["API_DASHBOARD"]:
@@ -654,6 +685,10 @@ CONNECTED_DASHBOARD_HTML = """
                 <h2>OBERON MIND</h2>
                 <div id="oberon">Loading...</div>
             </div>
+            <div class="card">
+                <h2>PHANTOM SPLIT (GPU/CPU)</h2>
+                <div id="phantom_split">Loading...</div>
+            </div>
         </div>
 
         <div class="card">
@@ -774,6 +809,21 @@ CONNECTED_DASHBOARD_HTML = """
                         stat('Training Sessions', ob.training_sessions) +
                         stat('Knowledge Entries', ob.knowledge_entries) +
                         stat('Status', ob.status);
+                }
+
+                // Phantom Split
+                const ps = d.phantom_split;
+                if (ps) {
+                    document.getElementById('phantom_split').innerHTML =
+                        stat('Status', ps.active ? 'ACTIVE' : 'INACTIVE') +
+                        stat('Mode', ps.mode) +
+                        stat('Pairing', ps.pairing) +
+                        stat('CPU Backend', ps.cpu_backend) +
+                        stat('GPU Backend', ps.gpu_backend) +
+                        stat('CPU Layers', ps.cpu_primary_layers) +
+                        stat('GPU Layers', ps.gpu_primary_layers) +
+                        stat('Virtual Layers', ps.virtual_layers) +
+                        stat('Sync Protocol', ps.sync_protocol);
                 }
 
                 // Raw JSON

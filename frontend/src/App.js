@@ -89,6 +89,9 @@ const CommandCenter = () => {
   const [hyperAVX, setHyperAVX] = useState(null);
   const [hyperARM, setHyperARM] = useState(null);
   const [hyperCompare, setHyperCompare] = useState(null);
+  const [pcie, setPcie] = useState(null);
+  const [pcieSrc, setPcieSrc] = useState(null);
+  const [showSrc, setShowSrc] = useState(false);
   const [live, setLive] = useState(false);
   const [liveTick, setLiveTick] = useState(null);
   const [lastSync, setLastSync] = useState(null);
@@ -192,6 +195,18 @@ const CommandCenter = () => {
     } finally { set("hyper", 0); }
   };
 
+  const runPcie = async () => {
+    set("pcie", 1);
+    try {
+      const [r, s] = await Promise.all([
+        axios.post(`${API}/pcie/run`, { epochs: 256, capture_every: 8 }),
+        axios.get(`${API}/pcie/source`),
+      ]);
+      setPcie(r.data);
+      setPcieSrc(s.data);
+    } finally { set("pcie", 0); }
+  };
+
   const runAll = async () => {
     set("all", 1);
     try {
@@ -247,6 +262,7 @@ const CommandCenter = () => {
     { name: "hard_compress",  ok: !!hardR,    icon: Package },
     { name: "qint_levels",    ok: !!qintBench,icon: Gauge },
     { name: "hyperlearn",     ok: !!hyperAVX, icon: Brain },
+    { name: "pcie_cuda",      ok: !!pcie,     icon: Cpu },
   ];
   const connectedCount = modulesConnected.filter(m => m.ok).length;
 
@@ -731,6 +747,120 @@ const CommandCenter = () => {
             ) : <p className="text-xs text-zinc-600 mt-4">Run deep ZTDS encryption.</p>}
           </Panel>
         </div>
+
+        {/* PCIe CUDA Engine v2 */}
+        <Panel
+          icon={Cpu}
+          title="FXION PCIe Engine v2 · CUDA Kernel"
+          subtitle="12L × 12B · UCB1 √2 · IQ2_XS primary · OBTERON9 QLOGIC entropy-epoch solver"
+          testid="pcie-panel"
+        >
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-[11px] text-zinc-500 font-mono">
+              3 CUDA kernels (ucb1_score / obteron9_qlogic / update_reward). CPU-mirror runs here · GPU build via <span className="text-amber-300">nvcc -arch=sm_52 -O3</span>.
+            </p>
+            <div className="flex gap-2">
+              <Btn onClick={runPcie} busy={busy.pcie} testid="run-pcie-btn">Run 256 epochs · 144 bridges</Btn>
+              <Btn onClick={() => setShowSrc(s => !s)} variant="ghost" testid="toggle-src-btn">{showSrc ? "Hide" : "Show"} .cu source</Btn>
+            </div>
+          </div>
+
+          {pcie ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Stats */}
+              <div className="space-y-1 border border-zinc-800 p-3">
+                <div className="text-[11px] uppercase tracking-widest text-amber-300 font-mono mb-2">Solver Output</div>
+                <Stat label="Kernel" value="v2 mirror"/>
+                <Stat label="Topology" value={pcie.topology}/>
+                <Stat label="UCB1 C" value={pcie.ucb1_c.toFixed(4)}/>
+                <Stat label="ε threshold" value={pcie.epsilon}/>
+                <Stat label="Epochs run" value={`${pcie.epochs_converged} / ${pcie.epochs_target}`}/>
+                <Stat label="Converged" value={pcie.converged ? "✓ early stop" : "— max reached"}/>
+                <Stat label="Wall time" value={`${pcie.wall_ms} ms`}/>
+                <Stat label="Throughput" value={`${pcie.throughput_bridges_per_s.toLocaleString()} bridges/s`}/>
+                <Stat label="Best (vote)" value={pcie.best_quant}/>
+                <Stat label="IQ2_XS share" value={`${(pcie.iq2_xs_share*100).toFixed(1)}%`}/>
+              </div>
+
+              {/* Entropy curve */}
+              <div className="border border-zinc-800 p-3">
+                <div className="text-[11px] uppercase tracking-widest text-amber-300 font-mono mb-2">Σ Entropy curve · OBTERON9</div>
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={pcie.entropy_curve.map((v, i) => ({ t: i, H: v }))}>
+                      <CartesianGrid stroke="#18181b" strokeDasharray="2 2"/>
+                      <XAxis dataKey="t" tick={{ fill: "#71717a", fontSize: 9 }}/>
+                      <YAxis tick={{ fill: "#71717a", fontSize: 9 }}/>
+                      <Tooltip contentStyle={{ background: "#09090b", border: "1px solid #27272a", fontSize: 11 }}/>
+                      <Line type="monotone" dataKey="H" stroke="#fbbf24" strokeWidth={2} dot={false}/>
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="grid grid-cols-2 mt-2 gap-2 text-[10px] font-mono text-zinc-500">
+                  <span>H₀: <span className="text-zinc-300">{pcie.global_entropy_initial}</span></span>
+                  <span>H_final: <span className="text-zinc-300">{pcie.global_entropy_final}</span></span>
+                </div>
+              </div>
+
+              {/* Vote histogram */}
+              <div className="border border-zinc-800 p-3">
+                <div className="text-[11px] uppercase tracking-widest text-amber-300 font-mono mb-2">Vote distribution · 144 bridges</div>
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={Object.entries(pcie.votes).map(([q, c]) => ({ quant: q, count: c }))}>
+                      <CartesianGrid stroke="#18181b" strokeDasharray="2 2"/>
+                      <XAxis dataKey="quant" tick={{ fill: "#71717a", fontSize: 9, fontFamily: "monospace" }} angle={-30} textAnchor="end" height={50}/>
+                      <YAxis tick={{ fill: "#71717a", fontSize: 9 }}/>
+                      <Tooltip contentStyle={{ background: "#09090b", border: "1px solid #27272a", fontSize: 11 }}/>
+                      <Bar dataKey="count" radius={[2, 2, 0, 0]}>
+                        {Object.entries(pcie.votes).map(([q], i) => (
+                          <Cell key={i} fill={QUANT_COLORS[q] || "#a1a1aa"}/>
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Per-layer breakdown */}
+              <div className="lg:col-span-3 border-t border-zinc-900 pt-3">
+                <div className="text-[11px] uppercase tracking-widest text-amber-300 font-mono mb-2">Per-Layer Result (12L · PHANTOM_SPLIT)</div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+                  {pcie.per_layer.map(l => (
+                    <div key={l.layer} className={`border p-2 text-[10px] font-mono ${l.backend.includes('GPU') ? 'border-cyan-500/30' : 'border-amber-500/30'}`}>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-zinc-500">L{String(l.layer).padStart(2,'0')}</span>
+                        <span className={l.backend.includes('GPU') ? "text-cyan-400" : "text-amber-300"}>
+                          {l.backend.includes('GPU') ? "GPU" : "CPU"}
+                        </span>
+                      </div>
+                      <div className="text-zinc-200" style={{color: QUANT_COLORS[l.best] || "#fbbf24"}}>{l.best}</div>
+                      <div className="text-zinc-600">IQ2_XS: {l.iq2_xs_count}/12</div>
+                      <div className="text-zinc-600">H̄: {l.entropy_mean}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Source viewer */}
+              {showSrc && pcieSrc && (
+                <div className="lg:col-span-3 border-t border-zinc-900 pt-3">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[11px] uppercase tracking-widest text-amber-300 font-mono">
+                      {pcieSrc.file} · {pcieSrc.lines} lines · kernels: {pcieSrc.kernels.join(", ")}
+                    </span>
+                    <span className="text-[10px] text-zinc-500 font-mono">{pcieSrc.build_command}</span>
+                  </div>
+                  <pre className="bg-zinc-950 border border-zinc-900 p-3 text-[10px] font-mono text-zinc-300 max-h-[280px] overflow-auto leading-relaxed">{pcieSrc.source_preview}</pre>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-600 mt-4">
+              Click Run to execute the OBTERON9 QLOGIC entropy-epoch solver. Each epoch evaluates 144 bridges in parallel using vectorised numpy (mirror of the CUDA kernels).
+            </p>
+          )}
+        </Panel>
 
         {/* HYPERLEARN · XOR-on-Success */}
         <Panel

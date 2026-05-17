@@ -24,6 +24,7 @@ from fxion.onyx_runtime import ONYXRuntime
 from fxion import qint_int2, ztds_entropy, xyz_elliptic, neuron_bridge, quantum_entropy
 from fxion import qint_levels, qi_neuronbridge, deep_learn_sdk, elliptic_seismo, hard_compress
 from fxion import hyperlearn
+from fxion import fxion_pcie_simulator
 
 # MongoDB
 mongo_url = os.environ['MONGO_URL']
@@ -428,6 +429,40 @@ async def hyperlearn_compare(req: HyperCompareReq):
         weight_dim=max(32, min(req.weight_dim, 4096)),
         seed=req.seed,
     )
+
+
+# ────────── FXION PCIe v2 · CUDA (mirrored on CPU) ──────────
+class PcieReq(BaseModel):
+    epochs: int = 256
+    capture_every: int = 8
+
+
+@api.post("/pcie/run")
+async def pcie_run(req: PcieReq):
+    return fxion_pcie_simulator.run(
+        epochs=max(8, min(req.epochs, 2048)),
+        capture_every=max(0, min(req.capture_every, 64)),
+    )
+
+
+@api.get("/pcie/source")
+async def pcie_source():
+    """Return the CUDA kernel source for inspection in the UI."""
+    p = ROOT_DIR / "fxion" / "fxion_pcie_engine.cu"
+    if not p.exists():
+        raise HTTPException(404, "kernel source missing")
+    src = p.read_text()
+    return {
+        "file": "fxion_pcie_engine.cu",
+        "lines": src.count("\n"),
+        "size_bytes": len(src),
+        "build_command": "nvcc -arch=sm_52 -O3 -DFXION_PCIE_STANDALONE fxion_pcie_engine.cu -o fxion_pcie_v2",
+        "kernels": ["ucb1_score_kernel", "obteron9_qlogic_kernel", "update_reward_kernel"],
+        "topology": "12 layers × 12 bridges",
+        "primary_quant": "IQ2_XS",
+        "source_preview": src[:1800],
+    }
+
 
 
 

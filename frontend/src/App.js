@@ -92,6 +92,7 @@ const CommandCenter = () => {
   const [pcie, setPcie] = useState(null);
   const [pcieSrc, setPcieSrc] = useState(null);
   const [showSrc, setShowSrc] = useState(false);
+  const [fusion, setFusion] = useState(null);
   const [live, setLive] = useState(false);
   const [liveTick, setLiveTick] = useState(null);
   const [lastSync, setLastSync] = useState(null);
@@ -207,6 +208,17 @@ const CommandCenter = () => {
     } finally { set("pcie", 0); }
   };
 
+  const runFusion = async () => {
+    set("fuse", 1);
+    try {
+      const r = await axios.get(`${API}/qfusion/merge`);
+      setFusion(r.data);
+    } finally { set("fuse", 0); }
+  };
+
+  // auto-load fusion on mount
+  useEffect(() => { runFusion(); /* eslint-disable-next-line */ }, []);
+
   const runAll = async () => {
     set("all", 1);
     try {
@@ -263,6 +275,7 @@ const CommandCenter = () => {
     { name: "qint_levels",    ok: !!qintBench,icon: Gauge },
     { name: "hyperlearn",     ok: !!hyperAVX, icon: Brain },
     { name: "pcie_cuda",      ok: !!pcie,     icon: Cpu },
+    { name: "qfusion",        ok: !!fusion,   icon: Layers },
   ];
   const connectedCount = modulesConnected.filter(m => m.ok).length;
 
@@ -747,6 +760,94 @@ const CommandCenter = () => {
             ) : <p className="text-xs text-zinc-600 mt-4">Run deep ZTDS encryption.</p>}
           </Panel>
         </div>
+
+        {/* QUANT FUSION · MERGED LANES */}
+        <Panel
+          icon={Layers}
+          title="Quant Fusion · Merged Lanes"
+          subtitle="INT_K ALL · IQ_XS ALL · M+XSM+NL Hybrid · fused score = 0.5·acc + 0.3·spd + 0.2·vram"
+          testid="fusion-panel"
+        >
+          <div className="flex justify-end mb-3">
+            <Btn onClick={runFusion} busy={busy.fuse} testid="run-fusion-btn">Recompute fusion</Btn>
+          </div>
+
+          {fusion ? (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                {fusion.ranked.map((r, idx) => {
+                  const f = r.fused;
+                  const isWinner = r.name === fusion.winner;
+                  return (
+                    <div
+                      key={r.name}
+                      data-testid={`fusion-lane-${r.name}`}
+                      className={`relative border p-4 ${isWinner ? "border-amber-400/70 bg-amber-500/5" : "border-zinc-800 bg-zinc-950/50"}`}
+                    >
+                      {isWinner && (
+                        <div className="absolute -top-2 left-3 px-1.5 bg-black border border-amber-400/70 text-amber-300 text-[9px] tracking-[0.3em] uppercase">★ WINNER</div>
+                      )}
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[12px] tracking-[0.2em] uppercase text-zinc-200 font-mono">{r.name.replace(/_/g, " · ")}</span>
+                        <span className="text-[10px] font-mono text-zinc-500">#{idx + 1}</span>
+                      </div>
+                      <div className="text-[10px] font-mono text-zinc-500 mb-3">family {f.family_signature} · {f.n_members} members · boost {f.boost_factor}×</div>
+
+                      {/* member chips */}
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {f.members.map(m => (
+                          <span
+                            key={m}
+                            className="px-1.5 py-0.5 text-[9px] font-mono border"
+                            style={{
+                              color: QUANT_COLORS[m] || "#a1a1aa",
+                              borderColor: QUANT_COLORS[m] ? `${QUANT_COLORS[m]}80` : "#3f3f46",
+                            }}
+                          >{m}</span>
+                        ))}
+                      </div>
+
+                      <div className="space-y-1 text-[11px] font-mono">
+                        <div className="flex justify-between"><span className="text-zinc-500">fused score</span><span className="text-amber-300 text-base">{r.score}</span></div>
+                        <div className="flex justify-between"><span className="text-zinc-500">accuracy</span><span>{f.fused_accuracy} <span className="text-zinc-600">[{f.min_accuracy}…{f.max_accuracy}]</span></span></div>
+                        <div className="flex justify-between"><span className="text-zinc-500">tok/s (harm)</span><span>{f.fused_tps_harmonic} <span className="text-zinc-600">peak {f.peak_tps}</span></span></div>
+                        <div className="flex justify-between"><span className="text-zinc-500">VRAM mean</span><span>{f.fused_vram_gb_mean} GB</span></div>
+                        <div className="flex justify-between"><span className="text-zinc-500">VRAM peak</span><span>{f.peak_vram_gb} GB</span></div>
+                        <div className="flex justify-between"><span className="text-zinc-500">∑ VRAM if all loaded</span><span>{f.total_vram_gb_all_loaded} GB</span></div>
+                        <div className="flex justify-between"><span className="text-zinc-500">summed prior</span><span>+{f.summed_prior}</span></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* fusion bar chart comparison */}
+              <div className="mt-5 border border-zinc-900 p-3">
+                <div className="text-[11px] uppercase tracking-widest text-amber-300 font-mono mb-2">Cross-lane comparison</div>
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={fusion.ranked.map(r => ({
+                      lane: r.name.replace("_HYBRID","").replace("_ALL",""),
+                      accuracy: Math.round(r.fused.fused_accuracy * 100),
+                      tps: r.fused.fused_tps_harmonic,
+                      score: Math.round(r.score * 100),
+                    }))}>
+                      <CartesianGrid stroke="#18181b" strokeDasharray="2 2"/>
+                      <XAxis dataKey="lane" tick={{ fill: "#a1a1aa", fontSize: 10, fontFamily: "monospace" }}/>
+                      <YAxis tick={{ fill: "#71717a", fontSize: 9, fontFamily: "monospace" }}/>
+                      <Tooltip contentStyle={{ background: "#09090b", border: "1px solid #27272a", fontSize: 11 }}/>
+                      <Bar dataKey="accuracy" fill="#10b981" name="Acc %"/>
+                      <Bar dataKey="tps" fill="#06b6d4" name="Tok/s"/>
+                      <Bar dataKey="score" fill="#fbbf24" name="Score ×100"/>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-zinc-600 mt-4">Computing merged lanes…</p>
+          )}
+        </Panel>
 
         {/* PCIe CUDA Engine v2 */}
         <Panel

@@ -25,6 +25,7 @@ from fxion import qint_int2, ztds_entropy, xyz_elliptic, neuron_bridge, quantum_
 from fxion import qint_levels, qi_neuronbridge, deep_learn_sdk, elliptic_seismo, hard_compress
 from fxion import hyperlearn
 from fxion import fxion_pcie_simulator
+from fxion import qfusion
 
 # MongoDB
 mongo_url = os.environ['MONGO_URL']
@@ -462,6 +463,12 @@ async def pcie_source():
         "primary_quant": "IQ2_XS",
         "source_preview": src[:1800],
     }
+
+# ────────── QUANT FUSION · merge lanes ──────────
+@api.get("/qfusion/merge")
+async def qfusion_merge():
+    return qfusion.all_merges()
+
 
 
 

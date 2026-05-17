@@ -1,49 +1,55 @@
-# FXION-ONYX · OMNITECH Q8 Engine — PRD (Jan 2026)
+# FXION-ONYX · OMNITECH Q8 Engine — PRD (Jan 17 2026)
 
 ## Original Problem Statement
 > Source: `FXION-ONYX-final-MERGED-IQ.zip` (Q8 Augmented Quantization Engine + NeuronBridge 8.712).
-> Extensions requested across sessions: QINT INT2/4/8 compression, ZTDS dynamic XOR + algebraic entropy, X/Y/Z axial elliptic cybersecurity, NeuronBridge config, quantum cryptographic entropy, QI NeuronBridge per-layer entropy, Deep-Learn SDK dynamic entropic graph, elliptic seismograph wave, HARD compression with XOR prefetch hash chain, real-time live polling, snapshots, HyperLearn epochs with XOR-on-Success across AVX512 / Cortex A72.
+> Iterative extensions: QINT INT2/4/8, ZTDS XOR + algebraic entropy, X/Y/Z axial elliptic ECDH, NeuronBridge config, quantum entropy, QI per-layer, Deep-Learn SDK, elliptic seismograph, HARD compression w/ XOR prefetch hash chain, HyperLearn epoch XOR-on-success, CUDA fxion_pcie_engine.cu + OBTERON9 QLOGIC solver, Quant Fusion (3 merged lanes), Co-training AVX512 ↔ Cortex A72, HyperLearn PRIMARY L06→L12 IQ2_XS, real-time live polling, snapshots.
+
+## 19 Modules wired end-to-end
+| # | Module | Endpoint | Key fact |
+|---|---|---|---|
+| 1 | system_class | /system/status | UCB1 Q8 augmented policy |
+| 2 | qfx_optimizer | /qfx/optimize | INT4/Q8/IQ adaptive bandit |
+| 3 | nnox_scheduler | /nnox/route | GPU/CPU/Hybrid routing |
+| 4 | onyx_runtime | /onyx/run | Live inference loop |
+| 5 | qint_int2 | /qint/compress | 10.67× compression, 94% acc |
+| 6 | ztds_entropy | /ztds/encrypt + /ztds/deep | XOR + GF(2⁸) algebraic stream |
+| 7 | xyz_elliptic | /xyz/handshake | secp256k1 tri-axial ECDH |
+| 8 | quantum_entropy | /quantum/entropy | SHA3-512 sponge + Von-Neumann |
+| 9 | neuron_bridge | /neuronbridge/* | 8.712 Quantum Genesis cfg loader |
+| 10 | qi_neuronbridge | /qi/neuronbridge | Per-layer ψ-coherence |
+| 11 | deep_learn_sdk | /deep/forward | Dynamic entropic graph, GELU |
+| 12 | elliptic_seismo | /elliptic/seismo | Lissajous wave + SHA3 signature |
+| 13 | hard_compress | /hard/roundtrip | RLE→XOR→DEFLATE→BLAKE2b chain |
+| 14 | qint_levels | /qint/bench-all | INT2/INT4/INT8 bench |
+| 15 | hyperlearn | /hyperlearn/run + /compare | AVX512 vs Cortex A72 (3.76× speedup) |
+| 16 | pcie_cuda | /pcie/run + /pcie/source | 12L×12B UCB1 OBTERON9 solver |
+| 17 | qfusion | /qfusion/merge | INT_K_ALL · IQ_XS_ALL · M_XSM_NL_HYBRID |
+| 18 | cotrain | /cotrain/run | AVX512 ↔ Cortex A72 XOR peer-sync + PCIe IQ4_NL override |
+| 19 | hyperlearn_primary | /hyperlearn/primary | L06→L12 IQ2_XS, XOR mask 0x5A |
+
+## Connected pipeline
+- `POST /api/pipeline/run-all` exécute les 19 modules en ~0.75s, retourne JSON unifié.
+- Frontend `runAll()` dispatch automatiquement chaque sous-objet vers son panel.
+- 19/19 module pills emerald après Run Full Stack.
+
+## Real-time + Snapshots
+- `GET /api/live/tick` polled every 3s when LIVE toggle = ON.
+- `POST /api/snapshot/save` persists full pipeline state in MongoDB `fxion_snapshots`.
+- Click any snapshot tile to restore dashboard state.
 
 ## Architecture
-- **Backend** FastAPI (`/app/backend/server.py`), Python modules in `/app/backend/fxion/`:
-  - Original: `system_class`, `qfx_optimizer`, `nnox_scheduler`, `onyx_runtime`, `core/qfx_quant`
-  - V2 experimental: `qint_int2`, `qint_levels` (2/4/8), `ztds_entropy`, `xyz_elliptic`, `quantum_entropy`, `neuron_bridge`, `qi_neuronbridge`, `deep_learn_sdk`, `elliptic_seismo`, `hard_compress`, `hyperlearn`
-- **Frontend** React Command Center (`/app/frontend/src/App.js`) — dark amber-on-black JetBrains Mono, Recharts (Radar/Bar/Line/Scatter), 15 module pills, live TPS strip, snapshot tiles.
-- **Storage** MongoDB: `fxion_runs` (pipeline events) + `fxion_snapshots` (full state captures).
+- Backend: FastAPI + Motor (MongoDB) + numpy.
+- Frontend: React + Recharts + lucide-react + Tailwind.
+- Storage: MongoDB collections `fxion_runs`, `fxion_snapshots`.
 
-## API surface (`/api`)
-Core: `/`, `/manifest`, `/system/status`, `/system/gpu-loop`, `/system/reset`
-QFX: `/qfx/optimize`, `/qfx/profiles`
-NNOX: `/nnox/route`
-ONYX: `/onyx/run`
-QINT: `/qint/compress`, `/qint/bench-all`
-ZTDS: `/ztds/encrypt`, `/ztds/deep`
-X/Y/Z: `/xyz/handshake`, `/xyz/sign`
-NeuronBridge: `/neuronbridge/config`, `/neuronbridge/summary`, `/qi/neuronbridge`
-Deep: `/deep/forward`
-Elliptic: `/elliptic/seismo`
-HARD: `/hard/roundtrip`
-HyperLearn: `/hyperlearn/run`, `/hyperlearn/compare`
-Pipeline: `/pipeline/run-all`, `/pipeline/history`
-Snapshot: `/snapshot/save`, `/snapshot/list`, `/snapshot/{id}`, `/snapshot/{id}` (DELETE)
-Live: `/live/tick`
+## CUDA build (when GPU available)
+`nvcc -arch=sm_52 -O3 -DFXION_PCIE_STANDALONE fxion/fxion_pcie_engine.cu -o bin/fxion_pcie_v2`
 
-## Implemented (2026-01-16/17)
-- 15 modules wired into the connected pipeline
-- Full Q8 quant policy, INT4 + IQ importance-matrix + INT2/INT4/INT8 unified bench
-- Tri-axial secp256k1 ECDH handshake with COHERENT digest
-- Dynamic entropic neural graph + Lissajous elliptic wave seismograph
-- HARD compression chain (RLE → XOR → DEFLATE → BLAKE2b) with tamper hash chain
-- HyperLearn epoch loop with **XOR-on-Success** mask 0x5A across **AVX512 (3.76× faster)** and **Cortex A72** backends
-- Real-time polling via `/api/live/tick` (3s interval) — best quant evolves, ψ-coherence updates
-- Snapshot save/load to MongoDB with 8-char IDs and tile UI
-
-## Pending / Backlog
-- P0: clarify Bitcoin wallet requirement (user requested mainnet but did not confirm safe option). MUST NOT build mainnet tx wallet without explicit (a) integration choice, (b) keys, (c) risk acknowledgement.
-- P1: WebSocket telemetry stream
-- P1: CUDA kernel build of `fxion_pcie_engine.cu`
-- P2: Persist UCB1 bandit state across restarts
-- P2: 14-mode selector (q8 / neural / turbo / bench / scan / safe / docker / rebuild …)
+## Pending
+- P0: Bitcoin wallet clarification (testnet vs mainnet read-only vs transactional) — user has not answered 1/2/3/STOP.
+- P1: WebSocket replace 3s polling.
+- P1: Interactive layer-range + quant sliders in HyperLearn Primary panel.
+- P2: 14-mode selector (q8/neural/turbo/bench/scan/safe/docker/rebuild).
 
 ## Test Credentials
 N/A — no auth.

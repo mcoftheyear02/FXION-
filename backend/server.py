@@ -194,46 +194,79 @@ async def quantum_entropy_report(req: EntropyReq):
 async def run_all():
     """Connect every module end-to-end and return a unified report."""
     t0 = time.time()
-    opt = QFXOptimizer(ENGINE)
-    opt.optimize(rounds=10)
-    sched = NNOXScheduler(ENGINE)
-    sched.route(jobs=6)
-    rt = ONYXRuntime(ENGINE)
-    rt.run(steps=5)
+    # Tier 1 — original FXION
+    opt = QFXOptimizer(ENGINE);  opt.optimize(rounds=10)
+    sched = NNOXScheduler(ENGINE); sched.route(jobs=6)
+    rt = ONYXRuntime(ENGINE);    rt.run(steps=5)
+    # Tier 2 — experimental crypto + compression
     qint = qint_int2.compress_report(size=4096)
     ztds = ztds_entropy.encrypt_demo("FXION-ONYX QUANTUM GENESIS PAYLOAD", "ZTDS-IQ-2026")
-    xyz = xyz_elliptic.axial_handshake()
-    qe = quantum_entropy.report(size=1024)
-    nb = neuron_bridge.summary()
-    # v2
+    xyz  = xyz_elliptic.axial_handshake()
+    qe   = quantum_entropy.report(size=1024)
+    nb   = neuron_bridge.summary()
+    # Tier 3 — V2 expansion
     qint_bench = qint_levels.bench_all(size=4096)
-    qi = qi_neuronbridge.layer_map()
+    qi   = qi_neuronbridge.layer_map()
     deep = deep_learn_sdk.run(nodes=16, steps=8)
     seismo = elliptic_seismo.wave(a=3.0, b=2.0, n=200)
     hard = hard_compress.roundtrip_demo()
+    # Tier 4 — Advanced learning & CUDA
+    hyper_cmp  = hyperlearn.compare(epochs=30, weight_dim=256)
+    pcie       = fxion_pcie_simulator.run(epochs=128, capture_every=8, include_fusion=True)
+    fusion     = qfusion.all_merges()
+    cotr       = cotrain.run(epochs=30, sync_every=6, weight_dim=128, apply_pcie=True)
+    hprim      = hyperlearn_primary.run(start_layer=6, end_layer=12, quant="IQ2_XS",
+                                        epochs=20, weight_dim=64)
     elapsed = round(time.time() - t0, 3)
+
     result = {
         "elapsed_s": elapsed,
         "ts": datetime.now(timezone.utc).isoformat(),
-        "modules_count": 14,
+        "modules_count": 19,
         "system_status": ENGINE.status(),
+        # tier 1
         "qfx": opt.report(),
         "nnox": sched.summary(),
         "onyx": rt.report(),
+        # tier 2
         "qint_int2": qint,
         "ztds": ztds,
         "xyz_elliptic": xyz,
         "quantum_entropy": qe,
         "neuron_bridge": nb,
+        # tier 3
         "qint_bench": qint_bench,
         "qi_neuronbridge": {k: v for k, v in qi.items() if k != "layers"} | {"layers_sample": qi["layers"][:3]},
         "deep_learn_sdk": {k: v for k, v in deep.items() if k != "steps"} | {"steps_sample": deep["steps"][:3]},
         "elliptic_seismo": {k: v for k, v in seismo.items() if k not in ("x", "y")},
         "hard_compress": hard,
+        # tier 4
+        "hyperlearn_compare": {
+            "speedup_vs_arm": hyper_cmp["speedup_vs_arm"],
+            "delta_success_rate": hyper_cmp["delta_success_rate"],
+            "delta_best_reward": hyper_cmp["delta_best_reward"],
+            "avx512": {k: v for k, v in hyper_cmp["avx512"].items() if k != "trace"},
+            "cortex_a72": {k: v for k, v in hyper_cmp["cortex_a72"].items() if k != "trace"},
+            "trace_avx": hyper_cmp["avx512"]["trace"][:60],
+            "trace_arm": hyper_cmp["cortex_a72"]["trace"][:60],
+        },
+        "pcie_cuda": {k: v for k, v in pcie.items() if k != "per_layer"} | {"per_layer_sample": pcie["per_layer"]},
+        "qfusion": fusion,
+        "cotrain": {
+            **{k: v for k, v in cotr.items() if k not in ("avx_trace", "arm_trace")},
+            "avx_trace": cotr["avx_trace"],
+            "arm_trace": cotr["arm_trace"],
+        },
+        "hyperlearn_primary": hprim,
     }
     await db.fxion_runs.insert_one({
-        "id": str(uuid.uuid4()), "event": "pipeline_run_all",
+        "id": str(uuid.uuid4()), "event": "pipeline_run_all_v3",
         "elapsed_s": elapsed, "best": opt.best_quant(),
+        "pcie_best": pcie["best_quant"],
+        "fusion_winner": fusion["winner"],
+        "cotrain_winner": cotr["winner_peer"],
+        "hprim_best_layer": hprim["best_layer"],
+        "modules": 19,
         "ts": result["ts"],
     })
     return result

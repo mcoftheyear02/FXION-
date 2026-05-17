@@ -247,22 +247,52 @@ const CommandCenter = () => {
     set("all", 1);
     try {
       const r = await axios.post(`${API}/pipeline/run-all`);
-      setPipeline(r.data);
-      setQfx(r.data.qfx); setNnox({ summary: r.data.nnox, routes: [] });
-      setOnyx({ report: r.data.onyx, metrics: [] }); setQint(r.data.qint_int2);
-      setZtds(r.data.ztds); setXyz(r.data.xyz_elliptic); setQent(r.data.quantum_entropy);
-      // v2 panels
-      setQintBench(r.data.qint_bench);
-      setQiLayers(r.data.qi_neuronbridge ? { ...r.data.qi_neuronbridge, layers: r.data.qi_neuronbridge.layers_sample || [] } : null);
-      setDeep(r.data.deep_learn_sdk ? { ...r.data.deep_learn_sdk, steps: r.data.deep_learn_sdk.steps_sample || [] } : null);
-      setSeismo(r.data.elliptic_seismo ? { ...r.data.elliptic_seismo, x: [], y: [] } : null);
-      setHardR(r.data.hard_compress);
-      const h = await axios.get(`${API}/pipeline/history`); setHistory(h.data.history || []);
-      const s = await axios.get(`${API}/system/status`); setStatus(s.data);
-      // pull QI full layers + seismo wave detail asynchronously (for live charts)
+      const d = r.data;
+      setPipeline(d);
+      // Tier 1
+      setQfx(d.qfx);
+      setNnox({ summary: d.nnox, routes: [] });
+      setOnyx({ report: d.onyx, metrics: [] });
+      // Tier 2
+      setQint(d.qint_int2);
+      setZtds(d.ztds);
+      setXyz(d.xyz_elliptic);
+      setQent(d.quantum_entropy);
+      // Tier 3
+      setQintBench(d.qint_bench);
+      setQiLayers(d.qi_neuronbridge ? { ...d.qi_neuronbridge, layers: d.qi_neuronbridge.layers_sample || [] } : null);
+      setDeep(d.deep_learn_sdk ? { ...d.deep_learn_sdk, steps: d.deep_learn_sdk.steps_sample || [] } : null);
+      setSeismo(d.elliptic_seismo ? { ...d.elliptic_seismo, x: [], y: [] } : null);
+      setHardR(d.hard_compress);
+      // Tier 4
+      if (d.hyperlearn_compare) {
+        const hc = d.hyperlearn_compare;
+        setHyperAVX({ ...hc.avx512, trace: hc.trace_avx || [] });
+        setHyperARM({ ...hc.cortex_a72, trace: hc.trace_arm || [] });
+        setHyperCompare({ speedup_vs_arm: hc.speedup_vs_arm, delta_success_rate: hc.delta_success_rate, delta_best_reward: hc.delta_best_reward });
+      }
+      if (d.pcie_cuda) {
+        setPcie({ ...d.pcie_cuda, per_layer: d.pcie_cuda.per_layer_sample || [] });
+      }
+      setFusion(d.qfusion);
+      setCotrain(d.cotrain);
+      setHyperPrimary(d.hyperlearn_primary);
+      // Refresh aux
+      const [h, s, snl] = await Promise.all([
+        axios.get(`${API}/pipeline/history`),
+        axios.get(`${API}/system/status`),
+        axios.get(`${API}/snapshot/list`),
+      ]);
+      setHistory(h.data.history || []);
+      setStatus(s.data);
+      setSnapshots(snl.data.snapshots || []);
+      // optional fuller refetch for live charts (entropy curve, seismo wave, deep steps)
       axios.get(`${API}/qi/neuronbridge`).then(x => setQiLayers(x.data)).catch(() => {});
       axios.post(`${API}/elliptic/seismo`, { a: 3, b: 2, n: 200 }).then(x => setSeismo(x.data)).catch(() => {});
       axios.post(`${API}/deep/forward`, { nodes: 16, steps: 8 }).then(x => setDeep(x.data)).catch(() => {});
+      axios.get(`${API}/pcie/source`).then(x => setPcieSrc(x.data)).catch(() => {});
+      setToast(`✓ Pipeline complete · 19 modules · ${d.elapsed_s}s`);
+      setTimeout(() => setToast(null), 4000);
     } finally { set("all", 0); }
   };
 
@@ -300,6 +330,8 @@ const CommandCenter = () => {
     { name: "hyperlearn",     ok: !!hyperAVX, icon: Brain },
     { name: "pcie_cuda",      ok: !!pcie,     icon: Cpu },
     { name: "qfusion",        ok: !!fusion,   icon: Layers },
+    { name: "cotrain",        ok: !!cotrain,  icon: ShieldCheck },
+    { name: "hyper_primary",  ok: !!hyperPrimary, icon: Brain },
   ];
   const connectedCount = modulesConnected.filter(m => m.ok).length;
 

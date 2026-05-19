@@ -21,6 +21,8 @@ VRAM_THRESHOLDS = {
 
 
 class NNOXScheduler:
+    __slots__ = ('system', 'routes', 'job_id')
+    
     def __init__(self, system=None):
         self.system   = system
         self.routes   = []
@@ -51,14 +53,16 @@ class NNOXScheduler:
         if self.system:
             best_q = self.system.policy.best()
 
+        decide = self._decide_route
+        routes_append = self.routes.append
+        
         for _ in range(jobs):
             self.job_id += 1
-            dest = self._decide_route(best_q)
+            dest = decide(best_q)
             lat  = round(random.uniform(12, 45) if dest == ROUTE_GPU else random.uniform(80, 200), 1)
             entry = {"job_id": self.job_id, "quant": best_q, "route": dest, "latency_ms": lat}
-            self.routes.append(entry)
+            routes_append(entry)
             log.info(f"  JOB#{self.job_id:04d}  quant={best_q}  route={dest}  latency={lat}ms")
-            time.sleep(0.02)
 
     def summary(self) -> dict:
         gpu_jobs = sum(1 for r in self.routes if r["route"] == ROUTE_GPU)

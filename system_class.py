@@ -16,7 +16,7 @@ Q8_INDEX = QUANTS.index("Q8_0")
 # ─────────────────────────────────────────────────────────
 # Q8 AUGMENTED POLICY (UCB1 + Q8 Bias)
 # ─────────────────────────────────────────────────────────
-@dataclass
+@dataclass(slots=True)
 class QuantPolicy:
     counts:  list = field(default_factory=lambda: [0]*len(QUANTS))
     rewards: list = field(default_factory=lambda: [0.0]*len(QUANTS))
@@ -25,13 +25,16 @@ class QuantPolicy:
 
     def select(self) -> int:
         self.t += 1
-        for i, c in enumerate(self.counts):
+        counts = self.counts
+        rewards = self.rewards
+        for i, c in enumerate(counts):
             if c == 0:
                 return i
         ucb = []
-        for i in range(len(QUANTS)):
-            exploit = self.rewards[i] / self.counts[i]
-            explore = math.sqrt(2 * math.log(self.t) / self.counts[i])
+        log_t = math.log(self.t)
+        for i in range(len(counts)):
+            exploit = rewards[i] / counts[i]
+            explore = math.sqrt(2 * log_t / counts[i])
             bonus   = self.q8_boost if i == Q8_INDEX else 0.0
             ucb.append(exploit + explore + bonus)
         return int(max(range(len(ucb)), key=lambda i: ucb[i]))
@@ -41,16 +44,20 @@ class QuantPolicy:
         self.rewards[arm] += reward
 
     def best(self) -> str:
-        if all(c == 0 for c in self.counts):
+        counts = self.counts
+        rewards = self.rewards
+        if all(c == 0 for c in counts):
             return "Q8_0"
-        scores = [self.rewards[i]/max(self.counts[i],1) for i in range(len(QUANTS))]
+        scores = [rewards[i]/max(counts[i],1) for i in range(len(counts))]
         return QUANTS[int(max(range(len(scores)), key=lambda i: scores[i]))]
 
     def summary(self) -> dict:
+        counts = self.counts
+        rewards = self.rewards
         return {
             QUANTS[i]: {
-                "count": self.counts[i],
-                "avg_reward": round(self.rewards[i]/max(self.counts[i],1), 4),
+                "count": counts[i],
+                "avg_reward": round(rewards[i]/max(counts[i],1), 4),
                 "q8_boosted": i == Q8_INDEX
             } for i in range(len(QUANTS))
         }
@@ -77,6 +84,8 @@ def probe_gpu() -> dict:
 # FXION SYSTEM
 # ─────────────────────────────────────────────────────────
 class FXIONSystem:
+    __slots__ = ('policy', 'gpu_info', 'running', 'history', 'mode', '_lock')
+    
     def __init__(self):
         self.policy   = QuantPolicy()
         self.gpu_info = probe_gpu()
@@ -100,16 +109,21 @@ class FXIONSystem:
     # ── GPU Loop ───────────────────────────────────────────
     def gpu_loop(self, iterations: int = 10):
         log.info(f"GPU loop starting ({iterations} iters)")
+        history_append = self.history.append
+        policy_select = self.policy.select
+        policy_update = self.policy.update
+        simulate = self._simulate_inference
+        compute = self._compute_reward
+        
         for i in range(iterations):
-            arm     = self.policy.select()
+            arm     = policy_select()
             quant   = QUANTS[arm]
-            tps     = self._simulate_inference(quant)
-            reward  = self._compute_reward(quant, tps)
-            self.policy.update(arm, reward)
+            tps     = simulate(quant)
+            reward  = compute(quant, tps)
+            policy_update(arm, reward)
             with self._lock:
-                self.history.append({"iter": i, "quant": quant, "tps": tps, "reward": reward})
+                history_append({"iter": i, "quant": quant, "tps": tps, "reward": reward})
             log.info(f"  iter={i:03d}  quant={quant:<10} tps={tps:.1f}  reward={reward:.4f}")
-            time.sleep(0.05)
         log.info(f"GPU loop done. Best quant: {self.policy.best()}")
 
     # ── QFX ────────────────────────────────────────────────

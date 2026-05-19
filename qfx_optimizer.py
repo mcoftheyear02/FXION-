@@ -42,6 +42,8 @@ FAMILY   = {q: p["family"]   for q, p in QUANT_PROFILES.items()}
 
 
 class QFXOptimizer:
+    __slots__ = ('system', 'counts', 'rewards', 't', 'log')
+    
     def __init__(self, system=None):
         self.system  = system
         self.counts  = {q: 0   for q in QUANTS}
@@ -97,14 +99,21 @@ class QFXOptimizer:
     # ── Public API ────────────────────────────────────────
     def optimize(self, rounds: int = 20):
         log.info(f"QFX optimize: {rounds} rounds | Q8_BOOST={Q8_BOOST_FACTOR} | IQ_BOOST={IQ_BOOST_FACTOR}")
+        select = self._select
+        bench = self._bench
+        reward = self._reward
+        counts = self.counts
+        rewards = self.rewards
+        log_append = self.log.append
+        
         for r in range(rounds):
-            q   = self._select()
-            tps = self._bench(q)
-            rew = self._reward(q, tps)
-            self.counts[q]  += 1
-            self.rewards[q] += rew
+            q   = select()
+            tps = bench(q)
+            rew = reward(q, tps)
+            counts[q]  += 1
+            rewards[q] += rew
             entry = {"round": r, "quant": q, "tps": round(tps,1), "reward": round(rew,4)}
-            self.log.append(entry)
+            log_append(entry)
             log.info(f"  r={r:03d}  {q:<10}  tps={tps:.1f}  rew={rew:.4f}")
 
     def best_quant(self) -> str:

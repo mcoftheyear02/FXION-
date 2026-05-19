@@ -205,47 +205,149 @@ class XORMerge:
 
 
 # ===============================================================================
-#  COMPRESSION / D COMPRESSION FXION
+#  COMPRESSION / D COMPRESSION FXION -- LZ4 + IQ2_XS
 # ===============================================================================
 class FXIONCompression:
     """
-    Nouvelle d compression FXION:
-    - Compression: zlib + XOR scramble du flux compress 
-    - D compression: d -scramble + zlib inflate + validation checksum
+    Nouvelle d compression FXION avec support IQ2_XS:
+    - Compression: LZ4 (rapide) + XOR scramble du flux compress 
+    - D compression: d -scramble + LZ4 decompress + validation checksum
+    - IQ2_XS Mode: Quantization INT2 avant compression pour rduction maximale
     """
 
     def __init__(self, key: bytes):
         self.scramble_key = hashlib.sha256(key + b"COMPRESS").digest()
+        import lz4.block
+        self.lz4 = lz4.block
 
-    def compress(self, data: bytes) -> bytes:
-        """Compress + XOR scramble."""
-        # Checksum original
+    def _quantize_iq2_xs(self, data: bytes) -> tuple:
+        """Quantize bytes to IQ2_XS format (2-bit per value with scales)."""
+        import numpy as np
+        arr = np.frombuffer(data, dtype=np.float32).copy()
+        n = len(arr)
+        block_size = 32
+        n_blocks = (n + block_size - 1) // block_size
+        
+        # Pad if necessary
+        if n % block_size != 0:
+            pad_size = block_size - (n % block_size)
+            arr = np.pad(arr, (0, pad_size), mode='constant')
+        
+        arr = arr.reshape(n_blocks, block_size)
+        amax = np.max(np.abs(arr), axis=1, keepdims=True)
+        scales = (amax / 3.0).reshape(-1)
+        scales = np.maximum(scales, 1e-8)
+        
+        normalized = arr / scales.reshape(-1, 1)
+        indices = np.clip(np.round(normalized + 3) / 2, 0, 3).astype(np.uint8)
+        
+        # Pack 4 values per byte (2-bit each)
+        packed = np.zeros((n_blocks, block_size // 4), dtype=np.uint8)
+        for i in range(block_size // 4):
+            packed[:, i] = (indices[:, i*4] | 
+                           (indices[:, i*4+1] << 2) | 
+                           (indices[:, i*4+2] << 4) | 
+                           (indices[:, i*4+3] << 6))
+        
+        iq2_data = packed.tobytes()
+        scale_data = scales.astype(np.float32).tobytes()
+        
+        return iq2_data, scale_data, n
+    
+    def _dequantize_iq2_xs(self, iq2_data: bytes, scale_data: bytes, original_len: int) -> bytes:
+        """Dequantize from IQ2_XS format back to float32 bytes."""
+        import numpy as np
+        block_size = 32
+        n_blocks = len(iq2_data) // (block_size // 4)
+        
+        packed = np.frombuffer(iq2_data, dtype=np.uint8).reshape(n_blocks, block_size // 4)
+        scales = np.frombuffer(scale_data, dtype=np.float32)
+        
+        indices = np.zeros((n_blocks, block_size), dtype=np.uint8)
+        for i in range(block_size // 4):
+            indices[:, i*4]   = (packed[:, i] >> 0) & 3
+            indices[:, i*4+1] = (packed[:, i] >> 2) & 3
+            indices[:, i*4+2] = (packed[:, i] >> 4) & 3
+            indices[:, i*4+3] = (packed[:, i] >> 6) & 3
+        
+        values = (indices.astype(np.float32) * 2.0) - 3.0
+        dequant = values * scales.reshape(-1, 1)
+        
+        result = dequant.flatten()[:original_len]
+        return result.tobytes()
+
+    def compress(self, data: bytes, use_iq2_xs: bool = False) -> bytes:
+        """Compress + XOR scramble with optional IQ2_XS quantization."""
+        # Checksum original (for standard mode only, IQ2_XS is lossy)
         checksum = struct.pack(">I", zlib.crc32(data) & 0xFFFFFFFF)
         # Longueur originale
         orig_len = struct.pack(">I", len(data))
-        # Compression zlib niveau 9
-        compressed = zlib.compress(data, 9)
+        
+        if use_iq2_xs:
+            # IQ2_XS quantization before compression
+            iq2_data, scale_data, n = self._quantize_iq2_xs(data)
+            # Compress both streams with LZ4 (store_size=False for efficiency)
+            compressed_iq2 = self.lz4.compress(iq2_data, store_size=False)
+            compressed_scales = self.lz4.compress(scale_data, store_size=False)
+            # Pack: [iq2_len 4B][scales_len 4B][iq2_compressed][scales_compressed]
+            payload = struct.pack(">II", len(compressed_iq2), len(compressed_scales)) + compressed_iq2 + compressed_scales
+            mode_flag = b"\x01"  # IQ2_XS mode (lossy, no CRC check)
+        else:
+            # Standard LZ4 compression (faster than zlib)
+            compressed = self.lz4.compress(data, store_size=False)
+            payload = struct.pack(">I", len(data)) + compressed  # prepend uncompressed size
+            mode_flag = b"\x00"  # Standard mode (lossless, CRC check)
+        
         # XOR scramble du flux compress 
-        scrambled = self._scramble(compressed)
-        # Format: [checksum 4B][orig_len 4B][scrambled_data]
-        return checksum + orig_len + scrambled
+        scrambled = self._scramble(payload)
+        # Format: [checksum 4B][orig_len 4B][mode 1B][scrambled_data]
+        return checksum + orig_len + mode_flag + scrambled
 
     def decompress(self, data: bytes) -> bytes:
         """D -scramble + d compression + validation."""
-        if len(data) < 8:
+        if len(data) < 9:
             raise ValueError("Donn es trop courtes pour d compression")
         # Extraire header
         checksum_expected = struct.unpack(">I", data[:4])[0]
         orig_len = struct.unpack(">I", data[4:8])[0]
-        scrambled = data[8:]
+        mode_flag = data[8]
+        scrambled = data[9:]
+        
         # D -scramble
-        compressed = self._scramble(scrambled)  # XOR auto-inverse
-        # D compression
-        decompressed = zlib.decompress(compressed)
-        # Validation
-        checksum_actual = zlib.crc32(decompressed) & 0xFFFFFFFF
-        if checksum_actual != checksum_expected:
-            raise ValueError(f"Checksum invalide: attendu {checksum_expected:#x}, re u {checksum_actual:#x}")
+        payload = self._scramble(scrambled)  # XOR auto-inverse
+        
+        if mode_flag == 0x01:
+            # IQ2_XS mode (lossy quantization)
+            if len(payload) < 8:
+                raise ValueError("Payload IQ2_XS trop court")
+            iq2_len = struct.unpack(">I", payload[:4])[0]
+            scales_len = struct.unpack(">I", payload[4:8])[0]
+            compressed_iq2 = payload[8:8+iq2_len]
+            compressed_scales = payload[8+iq2_len:8+iq2_len+scales_len]
+            
+            # Decompress with LZ4 (need to provide uncompressed sizes)
+            iq2_uncompressed_size = ((orig_len + 31) // 32) * (32 // 4)  # packed size
+            scales_uncompressed_size = ((orig_len + 31) // 32) * 4  # float32 per block
+            iq2_data = self.lz4.decompress(compressed_iq2, uncompressed_size=iq2_uncompressed_size)
+            scale_data = self.lz4.decompress(compressed_scales, uncompressed_size=scales_uncompressed_size)
+            
+            # Dequantize
+            decompressed = self._dequantize_iq2_xs(iq2_data, scale_data, orig_len)
+            # Skip CRC check for IQ2_XS (lossy by design)
+        else:
+            # Standard mode - first 4 bytes are uncompressed size
+            if len(payload) < 4:
+                raise ValueError("Payload standard trop court")
+            uncomp_size = struct.unpack(">I", payload[:4])[0]
+            compressed = payload[4:]
+            decompressed = self.lz4.decompress(compressed, uncompressed_size=uncomp_size)
+            
+            # Validation CRC for lossless mode only
+            checksum_actual = zlib.crc32(decompressed) & 0xFFFFFFFF
+            if checksum_actual != checksum_expected:
+                raise ValueError(f"Checksum invalide: attendu {checksum_expected:#x}, re u {checksum_actual:#x}")
+        
+        # Validate length for both modes
         if len(decompressed) != orig_len:
             raise ValueError(f"Longueur invalide: attendu {orig_len}, re u {len(decompressed)}")
         return decompressed

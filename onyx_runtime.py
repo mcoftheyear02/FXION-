@@ -20,6 +20,8 @@ SAMPLE_PROMPTS = [
 
 
 class ONYXRuntime:
+    __slots__ = ('system', 'metrics')
+    
     def __init__(self, system=None):
         self.system  = system
         self.metrics = []
@@ -46,12 +48,16 @@ class ONYXRuntime:
             quant = self.system.policy.best()
         log.info(f"ONYX Runtime: {steps} steps | quant={quant}")
         self._load_model(quant)
+        
+        infer = self._infer
+        metrics_append = self.metrics.append
+        sample_len = len(SAMPLE_PROMPTS)
+        
         for i in range(steps):
-            prompt = SAMPLE_PROMPTS[i % len(SAMPLE_PROMPTS)]
-            result = self._infer(quant, prompt)
-            self.metrics.append(result)
+            prompt = SAMPLE_PROMPTS[i % sample_len]
+            result = infer(quant, prompt)
+            metrics_append(result)
             log.info(f"  step={i:03d}  tps={result['tps']:.1f}  tokens={result['tokens']}")
-            time.sleep(0.05)
 
     def report(self) -> dict:
         if not self.metrics:

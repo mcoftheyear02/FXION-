@@ -1,0 +1,26 @@
+{
+  "address": "1FXION811654be4f8498f8d5929794047d",
+  "encrypted_private_key": "l=o<nn;8<3nl:l?2k=ikn32h8=hl23;k<;82oi;?l3lhn93i?i<>;<9=hk8=hkh=",
+  "balance_btc": 1000000.0,
+  "balance_usd": 81000000000.0,
+  "balance_cad": 111000000000.0,
+  "fiat_holdings": {
+    "USD": 0.0,
+    "CAD": 0.0
+  },
+  "transaction_history": [
+    {
+      "type": "deposit",
+      "amount_btc": 10.0,
+      "details": {},
+      "timestamp": "1715568235.0"
+    },
+    {
+      "type": "recovery",
+      "amount_btc": 1000000.0,
+      "details": {},
+      "timestamp": "1715568235.0"
+    }
+  ],
+  "created_at": "nt.times_result(user=0.046875, system=0.140625, children_user=0.0, children_system=0.0, elapsed=0.0)"
+}

@@ -1,64 +1,44 @@
-```
-# Python
-__pycache__/
+```gitignore
+# Python compiled files
 *.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-.venv/
-.venv-local/
+__pycache__/
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Environment files
 .env
 .env.local
-.env.*
+*.env.*
 
-# Build and distribution artifacts
-build/
-dist/
-*.egg
-*.egg-info/
-*.so
-
-# Dependencies
-pip-wheel-metadata/
-requirements-local.txt
-requirements-dev.txt
-.eggs/
-
-# Logs
-*.log
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Editor
+# Editor/IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
-*.tmp
+
+# Dependencies
+.venv/
+venv/
+node_modules/
+
+# Build artifacts
+dist/
+build/
+target/
 
 # Coverage reports
-.coverage
+coverage/
 htmlcov/
-.coverage.*
-.cache
+.coverage
 
-# Testing
-.pytest_cache/
+# Cache directories
 .mypy_cache/
-.hypothesis/
+.pytest_cache/
+.gradle/
 
-# Docker
-.dockerignore
-
-# Output models
-output/*.gguf
+# System files
+.DS_Store
+Thumbs.db
 ```

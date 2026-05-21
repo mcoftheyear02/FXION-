@@ -1,0 +1,102 @@
+[2026-05-12 17:51:52,818] WATCHDOG -- ==================================================
+[2026-05-12 17:51:52,818] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 17:51:52,818] WATCHDOG -- ==================================================
+[2026-05-12 17:51:52,818] WATCHDOG -- Starting FXION-ONYX Engine (Attempt 1)...
+[2026-05-12 17:51:56,385] WATCHDOG -- Engine crashed with return code 3221225786. Self-healing in progress...
+[2026-05-12 18:11:58,164] WATCHDOG -- ==================================================
+[2026-05-12 18:11:58,164] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 18:11:58,164] WATCHDOG -- ==================================================
+[2026-05-12 18:11:58,164] WATCHDOG -- Starting FXION-ONYX Engine (Attempt 1)...
+[2026-05-12 18:20:54,011] WATCHDOG -- ==================================================
+[2026-05-12 18:20:54,011] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 18:20:54,011] WATCHDOG -- ==================================================
+[2026-05-12 18:20:54,011] WATCHDOG -- Starting FXION-ONYX Engine (Attempt 1)...
+[2026-05-12 18:27:47,463] WATCHDOG -- ==================================================
+[2026-05-12 18:27:47,463] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 18:27:47,463] WATCHDOG -- ==================================================
+[2026-05-12 18:27:47,463] WATCHDOG -- Starting FXION-ONYX Engine (Attempt 1)...
+[2026-05-12 18:27:49,815] WATCHDOG -- Engine shut down gracefully.
+[2026-05-12 18:28:44,084] WATCHDOG -- ==================================================
+[2026-05-12 18:28:44,084] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 18:28:44,084] WATCHDOG -- ==================================================
+[2026-05-12 18:28:44,084] WATCHDOG -- Starting FXION-ONYX Engine (Attempt 1)...
+[2026-05-12 18:28:46,513] WATCHDOG -- Engine shut down gracefully.
+[2026-05-12 18:29:25,612] WATCHDOG -- ==================================================
+[2026-05-12 18:29:25,612] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 18:29:25,612] WATCHDOG -- ==================================================
+[2026-05-12 18:29:25,612] WATCHDOG -- Starting FXION-ONYX Engine (Attempt 1)...
+[2026-05-12 18:29:35,759] WATCHDOG -- Engine shut down gracefully.
+[2026-05-12 18:29:50,987] WATCHDOG -- ==================================================
+[2026-05-12 18:29:50,987] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 18:29:50,987] WATCHDOG -- ==================================================
+[2026-05-12 18:29:50,987] WATCHDOG -- Starting FXION-ONYX Engine (Attempt 1)...
+[2026-05-12 18:46:27,531] WATCHDOG -- ==================================================
+[2026-05-12 18:46:27,531] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 18:46:27,531] WATCHDOG -- ==================================================
+[2026-05-12 18:46:27,531] WATCHDOG -- Starting FXION-ONYX Engine (Attempt 1)...
+[2026-05-12 18:46:29,884] WATCHDOG -- Engine shut down gracefully.
+[2026-05-12 18:47:41,752] WATCHDOG -- ==================================================
+[2026-05-12 18:47:41,752] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 18:47:41,752] WATCHDOG -- ==================================================
+[2026-05-12 18:47:41,752] WATCHDOG -- Starting FXION-ONYX Engine (Attempt 1)...
+[2026-05-12 18:47:45,004] WATCHDOG -- Engine shut down gracefully.
+[2026-05-12 18:48:12,421] WATCHDOG -- ==================================================
+[2026-05-12 18:48:12,421] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 18:48:12,421] WATCHDOG -- ==================================================
+[2026-05-12 18:48:12,421] WATCHDOG -- Starting FXION-ONYX Engine (Attempt 1)...
+[2026-05-12 19:23:30,547] WATCHDOG -- ==================================================
+[2026-05-12 19:23:30,547] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 19:23:30,547] WATCHDOG -- ==================================================
+[2026-05-12 19:23:30,547] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 1)...[0m
+[2026-05-12 19:23:30,602] WATCHDOG -- [91mEngine crashed (Code: 1). Initiating Self-Heal...[0m
+[2026-05-12 19:23:35,603] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 2)...[0m
+[2026-05-12 19:23:35,654] WATCHDOG -- [91mEngine crashed (Code: 1). Initiating Self-Heal...[0m
+[2026-05-12 19:23:40,656] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 3)...[0m
+[2026-05-12 19:23:40,704] WATCHDOG -- [91mEngine crashed (Code: 1). Initiating Self-Heal...[0m
+[2026-05-12 19:23:45,705] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 4)...[0m
+[2026-05-12 19:23:45,754] WATCHDOG -- [91mEngine crashed (Code: 1). Initiating Self-Heal...[0m
+[2026-05-12 19:23:50,756] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 5)...[0m
+[2026-05-12 19:23:50,805] WATCHDOG -- [91mEngine crashed (Code: 1). Initiating Self-Heal...[0m
+[2026-05-12 19:23:55,805] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 6)...[0m
+[2026-05-12 19:23:55,855] WATCHDOG -- [91mEngine crashed (Code: 1). Initiating Self-Heal...[0m
+[2026-05-12 19:24:00,857] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 7)...[0m
+[2026-05-12 19:24:00,906] WATCHDOG -- [91mEngine crashed (Code: 1). Initiating Self-Heal...[0m
+[2026-05-12 19:24:05,907] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 8)...[0m
+[2026-05-12 19:24:05,956] WATCHDOG -- [91mEngine crashed (Code: 1). Initiating Self-Heal...[0m
+[2026-05-12 19:24:10,958] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 9)...[0m
+[2026-05-12 19:24:11,009] WATCHDOG -- [91mEngine crashed (Code: 1). Initiating Self-Heal...[0m
+[2026-05-12 19:24:16,010] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 10)...[0m
+[2026-05-12 19:24:16,059] WATCHDOG -- [91mEngine crashed (Code: 1). Initiating Self-Heal...[0m
+[2026-05-12 19:24:21,060] WATCHDOG -- Maximum restart attempts reached. Manual intervention required.
+[2026-05-12 19:24:37,103] WATCHDOG -- ==================================================
+[2026-05-12 19:24:37,103] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 19:24:37,103] WATCHDOG -- ==================================================
+[2026-05-12 19:24:37,103] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 1)...[0m
+[2026-05-12 19:24:39,460] WATCHDOG -- [92mEngine shut down gracefully.[0m
+[2026-05-12 19:24:47,907] WATCHDOG -- ==================================================
+[2026-05-12 19:24:47,907] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 19:24:47,907] WATCHDOG -- ==================================================
+[2026-05-12 19:24:47,907] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 1)...[0m
+[2026-05-12 19:24:53,773] WATCHDOG -- [92mEngine shut down gracefully.[0m
+[2026-05-12 19:25:02,582] WATCHDOG -- ==================================================
+[2026-05-12 19:25:02,582] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 19:25:02,582] WATCHDOG -- ==================================================
+[2026-05-12 19:25:02,583] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 1)...[0m
+[2026-05-12 19:25:23,044] WATCHDOG -- [92mEngine shut down gracefully.[0m
+[2026-05-12 19:25:29,586] WATCHDOG -- ==================================================
+[2026-05-12 19:25:29,586] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 19:25:29,586] WATCHDOG -- ==================================================
+[2026-05-12 19:25:29,586] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 1)...[0m
+[2026-05-12 19:28:41,809] WATCHDOG -- ==================================================
+[2026-05-12 19:28:41,810] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 19:28:41,810] WATCHDOG -- ==================================================
+[2026-05-12 19:28:41,810] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 1)...[0m
+[2026-05-12 19:32:55,464] WATCHDOG -- ==================================================
+[2026-05-12 19:32:55,465] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 19:32:55,465] WATCHDOG -- ==================================================
+[2026-05-12 19:32:55,465] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 1)...[0m
+[2026-05-12 19:54:01,909] WATCHDOG -- ==================================================
+[2026-05-12 19:54:01,909] WATCHDOG --    FXION-ONYX OMEGA AUTOMATION ACTIVE   
+[2026-05-12 19:54:01,909] WATCHDOG -- ==================================================
+[2026-05-12 19:54:01,910] WATCHDOG -- [93mStarting FXION-ONYX Engine (Attempt 1)...[0m
+[2026-05-12 19:54:05,635] WATCHDOG -- [92mEngine shut down gracefully.[0m

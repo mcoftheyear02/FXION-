@@ -18,7 +18,7 @@ class LoneRoadPipeline:
     def process_net(self, packet):
         """Process NET lane traffic with X.509 + HMAC"""
         if self.shield.verify_hmac(packet):
-            return self.ming.process(packet)
+            return self.mind.process(packet)
         return None
         
     def process_lan(self, packet):

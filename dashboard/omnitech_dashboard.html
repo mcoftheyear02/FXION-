@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚡ OMNITECH — AI Build Overview</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #080b14;
+      --card: #0d1117;
+      --border: #1c2333;
+      --accent: #6366f1;
+      --accent2: #22d3ee;
+      --accent3: #10b981;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --purple: #a855f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #0d1117 0%, #161b27 100%);
+      border-bottom: 2px solid var(--accent);
+      padding: 28px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 30px rgba(99,102,241,0.15);
+    }
+    .logo { display: flex; align-items: center; gap: 16px; }
+    .logo-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+    .logo-text h1 { font-size: 26px; font-weight: 800; letter-spacing: 3px; color: #fff; }
+    .logo-text p { font-size: 12px; color: var(--muted); margin-top: 2px; letter-spacing: 1px; }
+    .header-right { display: flex; gap: 12px; align-items: center; }
+    .badge {
+      padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 600;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+    .badge-live { background: rgba(16,185,129,0.15); color: var(--accent3); border: 1px solid rgba(16,185,129,0.3); }
+    .badge-v4 { background: rgba(99,102,241,0.15); color: var(--accent); border: 1px solid rgba(99,102,241,0.3); }
+    .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent3); margin-right: 6px; animation: pulse 1.4s ease infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: 4px; padding: 20px 48px 0; border-bottom: 1px solid var(--border); background: var(--card); }
+    .tab {
+      padding: 12px 22px; font-size: 13px; font-weight: 600; cursor: pointer;
+      border: none; background: none; color: var(--muted); border-bottom: 3px solid transparent;
+      transition: all .2s; letter-spacing: .5px; border-radius: 6px 6px 0 0;
+    }
+    .tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(99,102,241,0.08); }
+    .tab-content { display: none; padding: 32px 48px; }
+    .tab-content.active { display: block; }
+
+    /* ── Section Title ── */
+    .section-title {
+      font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 20px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-title span { color: var(--accent); }
+
+    /* ── Metric Cards ── */
+    .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .metric-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 22px; transition: border-color .2s, box-shadow .2s;
+      position: relative; overflow: hidden;
+    }
+    .metric-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--card-accent, var(--accent));
+    }
+    .metric-card:hover { border-color: var(--accent); box-shadow: 0 0 20px rgba(99,102,241,0.1); }
+    .metric-label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+    .metric-value { font-size: 36px; font-weight: 800; color: var(--card-accent, var(--accent)); line-height: 1; }
+    .metric-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    /* ── Architecture Diagram ── */
+    .arch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+    .arch-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 20px; transition: all .2s;
+    }
+    .arch-card:hover { border-color: var(--accent2); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(34,211,238,0.08); }
+    .arch-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .arch-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    .arch-card h3 { font-size: 14px; font-weight: 700; color: var(--text); }
+    .arch-card p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+    .arch-card .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .tag {
+      padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 600;
+      letter-spacing: .5px;
+    }
+
+    /* ── Flow Diagram ── */
+    .flow-container {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 28px; margin-bottom: 28px;
+    }
+    .flow {
+      display: flex; align-items: center; gap: 0; flex-wrap: wrap; justify-content: center;
+    }
+    .flow-node {
+      background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.4);
+      border-radius: 10px; padding: 12px 18px; text-align: center; min-width: 120px;
+    }
+    .flow-node .fn-icon { font-size: 20px; margin-bottom: 4px; }
+    .flow-node .fn-label { font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: .5px; }
+    .flow-node .fn-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .flow-arrow { font-size: 20px; color: var(--accent); padding: 0 10px; flex-shrink: 0; }
+
+    /* ── Charts ── */
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+    .chart-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px;
+    }
+    .chart-card h3 { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
+
+    /* ── Code Block ── */
+    .code-block {
+      background: #0a0d13; border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px; font-family: 'Courier New', monospace; font-size: 12px;
+      line-height: 1.7; color: #a9b1d6; overflow-x: auto; margin-bottom: 20px;
+      position: relative;
+    }
+    .code-block .kw { color: #bb9af7; }
+    .code-block .str { color: #9ece6a; }
+    .code-block .num { color: #ff9e64; }
+    .code-block .cm { color: #565f89; }
+    .code-block .fn { color: #7aa2f7; }
+    .code-block .cls { color: #e0af68; }
+    .copy-btn {
+      position: absolute; top: 10px; right: 10px;
+      background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.3);
+      color: var(--accent); padding: 4px 12px; border-radius: 6px;
+      font-size: 11px; cursor: pointer; font-family: inherit; font-weight: 600;
+    }
+    .copy-btn:hover { background: rgba(99,102,241,0.35); }
+
+    /* ── Stack Table ── */
+    .stack-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    .stack-table th {
+      text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 600;
+      color: var(--muted); letter-spacing: 1px; text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+    .stack-table td {
+      padding: 12px 16px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .stack-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .status-dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px;
+    }
+    .status-ok { background: var(--accent3); }
+    .status-warn { background: var(--warn); }
+
+    /* ── Endpoints ── */
+    .endpoints-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+    .endpoint {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 18px; display: flex; align-items: center; gap: 16px;
+      transition: border-color .2s;
+    }
+    .endpoint:hover { border-color: rgba(99,102,241,0.4); }
+    .method {
+      padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 700;
+      font-family: monospace; min-width: 50px; text-align: center;
+    }
+    .get { background: rgba(16,185,129,0.15); color: var(--accent3); }
+    .post { background: rgba(99,102,241,0.15); color: var(--accent); }
+    .ws { background: rgba(168,85,247,0.15); color: var(--purple); }
+    .endpoint-path { font-family: monospace; font-size: 13px; color: var(--accent2); min-width: 200px; }
+    .endpoint-desc { font-size: 12px; color: var(--muted); }
+
+    /* ── Deploy Steps ── */
+    .deploy-steps { display: flex; flex-direction: column; gap: 12px; }
+    .step {
+      display: flex; gap: 16px; align-items: flex-start;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 18px;
+    }
+    .step-num {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; flex-shrink: 0;
+    }
+    .step-content h4 { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .step-content p { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .step-content code {
+      font-family: monospace; font-size: 12px; color: var(--accent2);
+      background: rgba(34,211,238,0.08); padding: 2px 8px; border-radius: 4px;
+    }
+
+    /* ── Quant Grid ── */
+    .quant-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px; }
+    .quant-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px; text-align: center; transition: all .2s;
+    }
+    .quant-card:hover { transform: translateY(-3px); }
+    .quant-name { font-size: 14px; font-weight: 800; margin-bottom: 6px; }
+    .quant-bar { height: 4px; border-radius: 2px; margin-bottom: 10px; }
+    .quant-stat { font-size: 10px; color: var(--muted); line-height: 1.6; }
+
+    /* ── Simulated Live Feed ── */
+    .live-feed {
+      background: #0a0d13; border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px; height: 200px; overflow-y: auto; font-family: monospace;
+      font-size: 11px; line-height: 1.8;
+    }
+    .log-info { color: #7aa2f7; }
+    .log-rl { color: #bb9af7; }
+    .log-warn { color: #f59e0b; }
+    .log-ok { color: #9ece6a; }
+    .log-sec { color: #ef4444; }
+
+    /* ── Responsive ── */
+    @media (max-width: 1100px) {
+      .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+      .arch-grid { grid-template-columns: repeat(2, 1fr); }
+      .charts-grid { grid-template-columns: 1fr; }
+      .quant-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 700px) {
+      header, .tabs, .tab-content { padding-left: 20px; padding-right: 20px; }
+      .metrics-grid, .arch-grid { grid-template-columns: 1fr; }
+      .quant-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ HEADER ════════════════════════════════════════════════════ -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div class="logo-text">
+      <h1>OMNITECH</h1>
+      <p>AUTONOMOUS AI QUANTIZATION ENGINE · OMEGA v4 + GRAFANA</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="badge badge-live"><span class="pulse"></span>SYSTEM OVERVIEW</span>
+    <span class="badge badge-v4">v4.0</span>
+  </div>
+</header>
+
+<!-- ═══ TABS ══════════════════════════════════════════════════════ -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('overview', this)">🏠 Overview</button>
+  <button class="tab" onclick="switchTab('architecture', this)">🏗️ Architecture</button>
+  <button class="tab" onclick="switchTab('rl-engine', this)">🧠 RL Engine</button>
+  <button class="tab" onclick="switchTab('api', this)">🔌 API & Endpoints</button>
+  <button class="tab" onclick="switchTab('stack', this)">📦 Tech Stack</button>
+  <button class="tab" onclick="switchTab('deploy', this)">🚀 Deploy</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- TAB: OVERVIEW                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="tab-overview" class="tab-content active">
+
+  <div class="metrics-grid">
+    <div class="metric-card" style="--card-accent: #6366f1">
+      <div class="metric-label">RL Algorithm</div>
+      <div class="metric-value">UCB1</div>
+      <div class="metric-sub">Upper Confidence Bound Bandit</div>
+    </div>
+    <div class="metric-card" style="--card-accent: #22d3ee">
+      <div class="metric-label">Quantization Levels</div>
+      <div class="metric-value">6</div>
+      <div class="metric-sub">Q2_K → Q3_K → Q4_K_M → Q5_K_M → Q6_K → Q8_0</div>
+    </div>
+    <div class="metric-card" style="--card-accent: #10b981">
+      <div class="metric-label">Services</div>
+      <div class="metric-value">9</div>
+      <div class="metric-sub">Redis · Ollama · API · Worker · Scheduler · Security · Nginx · Prometheus · Grafana</div>
+    </div>
+    <div class="metric-card" style="--card-accent: #a855f7">
+      <div class="metric-label">Project Level</div>
+      <div class="metric-value">L3</div>
+      <div class="metric-sub">Production-Grade · ISO · Grafana · Ollama</div>
+    </div>
+  </div>
+
+  <div class="section-title">🎯 <span>What is OMNITECH?</span></div>
+  <div class="flow-container">
+    <p style="font-size:14px; color:var(--muted); line-height:1.8; margin-bottom:20px;">
+      OMNITECH OMEGA is an <strong style="color:var(--accent)">autonomous AI quantization optimizer</strong> that uses Reinforcement Learning (UCB1 bandit) 
+      to automatically find the optimal GGUF quantization level for Large Language Models. Instead of manually testing each quant, 
+      it learns which quantization delivers the best tradeoff between <strong style="color:var(--accent2)">speed (TPS)</strong>, 
+      <strong style="color:var(--accent3)">accuracy</strong>, and <strong style="color:var(--warn)">model size</strong>.
+    </p>
+    <div class="flow">
+      <div class="flow-node">
+        <div class="fn-icon">🤖</div>
+        <div class="fn-label">LLM Model</div>
+        <div class="fn-sub">f16 GGUF Input</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">
+        <div class="fn-icon">🧠</div>
+        <div class="fn-label">UCB1 Policy</div>
+        <div class="fn-sub">Selects Quant</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">
+        <div class="fn-icon">⚙️</div>
+        <div class="fn-label">llama.cpp</div>
+        <div class="fn-sub">Quantize + Run</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">
+        <div class="fn-icon">📊</div>
+        <div class="fn-label">Benchmark</div>
+        <div class="fn-sub">TPS + Accuracy</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">
+        <div class="fn-icon">🏆</div>
+        <div class="fn-label">Reward</div>
+        <div class="fn-sub">Update Policy</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node" style="background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.4)">
+        <div class="fn-icon">✅</div>
+        <div class="fn-label" style="color:var(--accent3)">Optimal Quant</div>
+        <div class="fn-sub">Auto-Selected</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="quant-grid">
+    <div class="quant-card" style="border-color:rgba(239,68,68,0.3)">
+      <div class="quant-name" style="color:#ef4444">Q2_K</div>
+      <div class="quant-bar" style="background:linear-gradient(90deg,#ef4444,#f97316);width:30%"></div>
+      <div class="quant-stat">Smallest<br>Fastest<br>Lowest Accuracy</div>
+    </div>
+    <div class="quant-card" style="border-color:rgba(249,115,22,0.3)">
+      <div class="quant-name" style="color:#f97316">Q3_K</div>
+      <div class="quant-bar" style="background:#f97316;width:44%"></div>
+      <div class="quant-stat">Very Small<br>Very Fast<br>Low Accuracy</div>
+    </div>
+    <div class="quant-card" style="border-color:rgba(234,179,8,0.3)">
+      <div class="quant-name" style="color:#eab308">Q4_K_M</div>
+      <div class="quant-bar" style="background:#eab308;width:58%"></div>
+      <div class="quant-stat">Balanced<br>Good Speed<br>Good Accuracy</div>
+    </div>
+    <div class="quant-card" style="border-color:rgba(34,197,94,0.3)">
+      <div class="quant-name" style="color:#22c55e">Q5_K_M</div>
+      <div class="quant-bar" style="background:#22c55e;width:72%"></div>
+      <div class="quant-stat">Good Size<br>Med Speed<br>High Accuracy</div>
+    </div>
+    <div class="quant-card" style="border-color:rgba(99,102,241,0.3)">
+      <div class="quant-name" style="color:#6366f1">Q6_K</div>
+      <div class="quant-bar" style="background:#6366f1;width:84%"></div>
+      <div class="quant-stat">Large<br>Slower<br>Very High Acc.</div>
+    </div>
+    <div class="quant-card" style="border-color:rgba(168,85,247,0.3)">
+      <div class="quant-name" style="color:#a855f7">Q8_0</div>
+      <div class="quant-bar" style="background:#a855f7;width:100%"></div>
+      <div class="quant-stat">Largest<br>Slowest<br>Near-Lossless</div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>📈 Simulated RL Reward Over Time</h3>
+      <canvas id="rewardChart" height="120"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>⚡ Expected TPS by Quantization</h3>
+      <canvas id="tpsChart" height="120"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- TAB: ARCHITECTURE                                              -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="tab-architecture" class="tab-content">
+
+  <div class="section-title">🏗️ <span>System Architecture</span></div>
+
+  <div class="arch-grid">
+    <div class="arch-card">
+      <div class="arch-card-header">
+        <div class="arch-icon" style="background:rgba(99,102,241,0.15)">🧠</div>
+        <div>
+          <h3>RL Quantizer (UCB1)</h3>
+          <div style="font-size:11px;color:var(--muted)">core/quantizer_rl.py</div>
+        </div>
+      </div>
+      <p>The brain of OMNITECH. Uses Upper Confidence Bound 1 bandit algorithm to select quantization levels, dispatch jobs, collect rewards, and converge on the optimal GGUF quant automatically.</p>
+      <div class="tags">
+        <span class="tag" style="background:rgba(99,102,241,0.15);color:var(--accent)">UCB1 Bandit</span>
+        <span class="tag" style="background:rgba(34,211,238,0.1);color:var(--accent2)">Reward Loop</span>
+        <span class="tag" style="background:rgba(16,185,129,0.1);color:var(--accent3)">llama.cpp</span>
+      </div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-card-header">
+        <div class="arch-icon" style="background:rgba(168,85,247,0.15)">📋</div>
+        <div>
+          <h3>UCB1 Policy</h3>
+          <div style="font-size:11px;color:var(--muted)">core/policy.py</div>
+        </div>
+      </div>
+      <p>Persistent policy engine with exponential moving average score updates. Forces exploration of untried quants first, then uses UCB1 formula to balance explore/exploit. State saved to JSON.</p>
+      <div class="tags">
+        <span class="tag" style="background:rgba(168,85,247,0.15);color:var(--purple)">EMA Updates</span>
+        <span class="tag" style="background:rgba(99,102,241,0.15);color:var(--accent)">Persistent State</span>
+      </div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-card-header">
+        <div class="arch-icon" style="background:rgba(245,158,11,0.15)">⚙️</div>
+        <div>
+          <h3>Worker (Multi-GPU)</h3>
+          <div style="font-size:11px;color:var(--muted)">core/worker.py</div>
+        </div>
+      </div>
+      <p>Consumes benchmark jobs from Redis queue. Auto-detects NVIDIA GPUs via nvidia-smi. Runs llama.cpp across all available GPUs, aggregates TPS, and pushes results back to Redis.</p>
+      <div class="tags">
+        <span class="tag" style="background:rgba(245,158,11,0.15);color:var(--warn)">Multi-GPU</span>
+        <span class="tag" style="background:rgba(239,68,68,0.15);color:var(--danger)">CUDA</span>
+        <span class="tag" style="background:rgba(34,211,238,0.1);color:var(--accent2)">Redis Queue</span>
+      </div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-card-header">
+        <div class="arch-icon" style="background:rgba(16,185,129,0.15)">🔄</div>
+        <div>
+          <h3>Scheduler</h3>
+          <div style="font-size:11px;color:var(--muted)">core/scheduler.py</div>
+        </div>
+      </div>
+      <p>Job queue rate limiter. Monitors Redis queue depth and sets a "scheduler_ready" gate flag. Prevents flooding by pausing the RL loop when queue exceeds MAX_QUEUE_SIZE (5 jobs). Heartbeat monitored.</p>
+      <div class="tags">
+        <span class="tag" style="background:rgba(16,185,129,0.15);color:var(--accent3)">Rate Limiter</span>
+        <span class="tag" style="background:rgba(99,102,241,0.15);color:var(--accent)">Heartbeat</span>
+      </div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-card-header">
+        <div class="arch-icon" style="background:rgba(239,68,68,0.15)">🛡️</div>
+        <div>
+          <h3>Security AI</h3>
+          <div style="font-size:11px;color:var(--muted)">security/security_ai.py</div>
+        </div>
+      </div>
+      <p>Anomaly detection layer that monitors for job flooding (queue > 50), abnormal TPS spikes (> 500 t/s), reward manipulation, and missing worker/scheduler heartbeats. Alerts logged to Redis + file.</p>
+      <div class="tags">
+        <span class="tag" style="background:rgba(239,68,68,0.15);color:var(--danger)">Anomaly Detection</span>
+        <span class="tag" style="background:rgba(245,158,11,0.15);color:var(--warn)">Alert Engine</span>
+      </div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-card-header">
+        <div class="arch-icon" style="background:rgba(34,211,238,0.15)">🌐</div>
+        <div>
+          <h3>API + WebSocket</h3>
+          <div style="font-size:11px;color:var(--muted)">api/app.py · api/stream_server.py</div>
+        </div>
+      </div>
+      <p>Flask REST API serving live dashboard HTML with Chart.js visualization. WebSocket server on port 8765 streams real-time RL events. Gunicorn production WSGI server with Nginx reverse proxy.</p>
+      <div class="tags">
+        <span class="tag" style="background:rgba(34,211,238,0.1);color:var(--accent2)">Flask</span>
+        <span class="tag" style="background:rgba(99,102,241,0.15);color:var(--accent)">WebSocket</span>
+        <span class="tag" style="background:rgba(16,185,129,0.15);color:var(--accent3)">Gunicorn</span>
+      </div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-card-header">
+        <div class="arch-icon" style="background:rgba(245,158,11,0.15)">📊</div>
+        <div>
+          <h3>Monitoring Stack</h3>
+          <div style="font-size:11px;color:var(--muted)">Prometheus + Grafana</div>
+        </div>
+      </div>
+      <p>Custom Prometheus exporter scrapes Redis metrics (queue depth, TPS history, reward stats). Pre-configured Grafana dashboard with auto-provisioning. Data retained for 7 days. Grafana on port 3000.</p>
+      <div class="tags">
+        <span class="tag" style="background:rgba(245,158,11,0.15);color:var(--warn)">Prometheus</span>
+        <span class="tag" style="background:rgba(245,158,11,0.15);color:#f97316">Grafana</span>
+      </div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-card-header">
+        <div class="arch-icon" style="background:rgba(168,85,247,0.15)">🦙</div>
+        <div>
+          <h3>Ollama Integration</h3>
+          <div style="font-size:11px;color:var(--muted)">omnitech-ollama / FastAPI</div>
+        </div>
+      </div>
+      <p>Separate Ollama deployment stack with a FastAPI chat bridge. Serves LLM inference via local Ollama on port 11434. API layer on port 9000 exposes /chat endpoint for direct model interaction.</p>
+      <div class="tags">
+        <span class="tag" style="background:rgba(168,85,247,0.15);color:var(--purple)">Ollama</span>
+        <span class="tag" style="background:rgba(34,211,238,0.1);color:var(--accent2)">FastAPI</span>
+        <span class="tag" style="background:rgba(99,102,241,0.15);color:var(--accent)">llama3</span>
+      </div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-card-header">
+        <div class="arch-icon" style="background:rgba(239,68,68,0.15)">💾</div>
+        <div>
+          <h3>Redis Message Bus</h3>
+          <div style="font-size:11px;color:var(--muted)">redis:7-alpine</div>
+        </div>
+      </div>
+      <p>Central message bus and state store. Queues: jobs, results, history, security_alerts. Keys: scheduler_ready, queue_depth, worker_heartbeat, scheduler_heartbeat. Persistent with save 60 1.</p>
+      <div class="tags">
+        <span class="tag" style="background:rgba(239,68,68,0.15);color:var(--danger)">Redis 7</span>
+        <span class="tag" style="background:rgba(99,102,241,0.15);color:var(--accent)">PubSub</span>
+        <span class="tag" style="background:rgba(16,185,129,0.15);color:var(--accent3)">Persistent</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-container">
+    <div class="section-title" style="margin-bottom:16px">🔗 <span>Inter-Service Data Flow</span></div>
+    <div class="flow" style="flex-direction:column; gap:10px; align-items:flex-start;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="flow-node" style="min-width:90px"><div class="fn-label">UCB1 Policy</div></div>
+        <div class="flow-arrow">→</div>
+        <span style="font-size:12px;color:var(--muted)">selects quant</span>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="min-width:90px"><div class="fn-label">RL Quantizer</div></div>
+        <div class="flow-arrow">→</div>
+        <span style="font-size:12px;color:var(--muted)">pushes job</span>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="min-width:90px"><div class="fn-label">Redis jobs</div></div>
+        <div class="flow-arrow">→</div>
+        <span style="font-size:12px;color:var(--muted)">blpop</span>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="min-width:90px"><div class="fn-label">Worker</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="flow-node" style="min-width:90px"><div class="fn-label">Worker</div></div>
+        <div class="flow-arrow">→</div>
+        <span style="font-size:12px;color:var(--muted)">rpush result</span>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="min-width:90px"><div class="fn-label">Redis results</div></div>
+        <div class="flow-arrow">→</div>
+        <span style="font-size:12px;color:var(--muted)">blpop</span>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="min-width:90px"><div class="fn-label">RL Quantizer</div></div>
+        <div class="flow-arrow">→</div>
+        <span style="font-size:12px;color:var(--muted)">update policy</span>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="min-width:90px"><div class="fn-label">UCB1 Policy</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- TAB: RL ENGINE                                                 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="tab-rl-engine" class="tab-content">
+  <div class="section-title">🧠 <span>Reinforcement Learning Engine</span></div>
+
+  <div class="metrics-grid">
+    <div class="metric-card" style="--card-accent:#6366f1">
+      <div class="metric-label">Algorithm</div>
+      <div class="metric-value" style="font-size:24px">UCB1</div>
+      <div class="metric-sub">Multi-Armed Bandit</div>
+    </div>
+    <div class="metric-card" style="--card-accent:#22d3ee">
+      <div class="metric-label">TPS Weight</div>
+      <div class="metric-value">0.6</div>
+      <div class="metric-sub">W_TPS (speed reward)</div>
+    </div>
+    <div class="metric-card" style="--card-accent:#10b981">
+      <div class="metric-label">Accuracy Weight</div>
+      <div class="metric-value">30.0</div>
+      <div class="metric-sub">W_ACC (accuracy reward)</div>
+    </div>
+    <div class="metric-card" style="--card-accent:#f59e0b">
+      <div class="metric-label">Size Penalty</div>
+      <div class="metric-value">0.01</div>
+      <div class="metric-sub">W_SIZE (size penalty)</div>
+    </div>
+  </div>
+
+  <div class="flow-container">
+    <div class="section-title" style="margin-bottom:12px">📐 <span>Reward Function</span></div>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="cm"># Composite reward — maximize speed &amp; accuracy, penalize model size</span>
+<span class="kw">def</span> <span class="fn">compute_reward</span>(tps, acc, size_mb):
+    reward = (
+        tps * W_TPS       <span class="cm"># speed:   0.6  × tokens/sec</span>
+        + acc * W_ACC     <span class="cm"># accuracy: 30.0 × eval score (0-1)</span>
+        - size_mb * W_SIZE<span class="cm"># size:    -0.01 × model size in MB</span>
+    )
+    <span class="kw">return</span> reward
+
+<span class="cm"># UCB1 selection formula</span>
+ucb = {
+    q: scores[q] / counts[q]
+       + math.sqrt(<span class="num">2</span> * math.log(total_steps) / counts[q])
+    <span class="kw">for</span> q <span class="kw">in</span> QUANTS
+}
+best_quant = max(ucb, key=ucb.get)
+
+<span class="cm"># EMA score update (α=0.1)</span>
+scores[q] = (<span class="num">1</span> - alpha) * scores[q] + alpha * new_reward
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
+    <div class="chart-card">
+      <h3>🎯 UCB1 Score Simulation (after 50 steps)</h3>
+      <canvas id="ucbChart" height="130"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>📉 Exploration vs Exploitation Over Time</h3>
+      <canvas id="exploitChart" height="130"></canvas>
+    </div>
+  </div>
+
+  <div class="flow-container">
+    <div class="section-title" style="margin-bottom:12px">💾 <span>Live RL Log Simulation</span></div>
+    <div class="live-feed" id="liveFeed">
+      <div class="log-info">[00:00:01] [RL] OMNITECH RL Quantizer started</div>
+      <div class="log-info">[00:00:01] [RL] Base model: ./models/mistral-7b.f16.gguf</div>
+      <div class="log-info">[00:00:01] [RL] Reward weights — TPS: 0.6, ACC: 30.0, SIZE: -0.01</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- TAB: API                                                       -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="tab-api" class="tab-content">
+  <div class="section-title">🔌 <span>API & Endpoints</span></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">
+    <div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;font-weight:600;text-transform:uppercase;letter-spacing:1px">OMNITECH Core API (port 5000)</p>
+      <div class="endpoints-list">
+        <div class="endpoint">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/</span>
+          <span class="endpoint-desc">Live dashboard — HTML with Chart.js real-time graphs</span>
+        </div>
+        <div class="endpoint">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/history</span>
+          <span class="endpoint-desc">Last 100 RL iterations with quant, TPS, reward, step</span>
+        </div>
+        <div class="endpoint">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/status</span>
+          <span class="endpoint-desc">System health, best_tps, best_quant, queue depth, heartbeats</span>
+        </div>
+        <div class="endpoint">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/api/policy</span>
+          <span class="endpoint-desc">UCB1 policy scores + counts for all 6 quantization levels</span>
+        </div>
+        <div class="endpoint">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/health</span>
+          <span class="endpoint-desc">Redis ping health check — returns ok / degraded</span>
+        </div>
+        <div class="endpoint">
+          <span class="method ws">WS</span>
+          <span class="endpoint-path">ws://host:8765</span>
+          <span class="endpoint-desc">Real-time RL event stream via WebSocket</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;font-weight:600;text-transform:uppercase;letter-spacing:1px">Ollama Chat API (port 9000)</p>
+      <div class="endpoints-list">
+        <div class="endpoint">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/chat</span>
+          <span class="endpoint-desc">Send message to local Ollama LLM (llama3)</span>
+        </div>
+      </div>
+
+      <p style="font-size:13px;color:var(--muted);margin:20px 0 16px;font-weight:600;text-transform:uppercase;letter-spacing:1px">Monitoring</p>
+      <div class="endpoints-list">
+        <div class="endpoint">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">:9090</span>
+          <span class="endpoint-desc">Prometheus metrics server</span>
+        </div>
+        <div class="endpoint">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">:3000</span>
+          <span class="endpoint-desc">Grafana dashboard (admin/omnitech)</span>
+        </div>
+        <div class="endpoint">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">:9200</span>
+          <span class="endpoint-desc">OMNITECH Prometheus Exporter</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">💬 <span>Example API Usage</span></div>
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="cm"># Get RL status</span>
+curl http://localhost:5000/api/status
+
+<span class="cm"># Chat with local Ollama LLM</span>
+curl -X POST http://localhost:9000/chat \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"message": "Explain UCB1 bandit algorithm"}'</span>
+
+<span class="cm"># WebSocket stream (Python)</span>
+<span class="kw">import</span> asyncio, websockets
+<span class="kw">async def</span> <span class="fn">stream</span>():
+    <span class="kw">async with</span> websockets.connect(<span class="str">"ws://localhost:8765"</span>) <span class="kw">as</span> ws:
+        <span class="kw">async for</span> msg <span class="kw">in</span> ws:
+            print(msg)
+asyncio.run(stream())
+
+<span class="cm"># Prometheus query example</span>
+curl <span class="str">"http://localhost:9090/api/v1/query?query=omnitech_best_tps"</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- TAB: TECH STACK                                                -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="tab-stack" class="tab-content">
+  <div class="section-title">📦 <span>Full Technology Stack</span></div>
+
+  <table class="stack-table">
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th>Technology</th>
+        <th>Port</th>
+        <th>Role</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>🧠 RL Engine</td>
+        <td>Python 3 · UCB1</td>
+        <td>—</td>
+        <td>Autonomous quantization optimizer</td>
+        <td><span class="status-dot status-ok"></span>Core</td>
+      </tr>
+      <tr>
+        <td>🌐 REST API</td>
+        <td>Flask + Gunicorn</td>
+        <td>5000</td>
+        <td>Dashboard + REST endpoints</td>
+        <td><span class="status-dot status-ok"></span>Core</td>
+      </tr>
+      <tr>
+        <td>📡 WebSocket</td>
+        <td>websockets (Python)</td>
+        <td>8765</td>
+        <td>Real-time RL event streaming</td>
+        <td><span class="status-dot status-ok"></span>Core</td>
+      </tr>
+      <tr>
+        <td>💾 Message Bus</td>
+        <td>Redis 7 Alpine</td>
+        <td>6379</td>
+        <td>Job queue + state store</td>
+        <td><span class="status-dot status-ok"></span>Core</td>
+      </tr>
+      <tr>
+        <td>🦙 LLM Backend</td>
+        <td>Ollama</td>
+        <td>11434</td>
+        <td>Local LLM inference (llama3)</td>
+        <td><span class="status-dot status-ok"></span>Optional</td>
+      </tr>
+      <tr>
+        <td>💬 Chat API</td>
+        <td>FastAPI + uvicorn</td>
+        <td>9000</td>
+        <td>Ollama HTTP bridge</td>
+        <td><span class="status-dot status-ok"></span>Optional</td>
+      </tr>
+      <tr>
+        <td>🔁 Reverse Proxy</td>
+        <td>Nginx Alpine</td>
+        <td>80</td>
+        <td>Route traffic to API</td>
+        <td><span class="status-dot status-ok"></span>Core</td>
+      </tr>
+      <tr>
+        <td>📊 Metrics</td>
+        <td>Prometheus</td>
+        <td>9090</td>
+        <td>Scrape + store metrics</td>
+        <td><span class="status-dot status-ok"></span>Monitoring</td>
+      </tr>
+      <tr>
+        <td>📈 Visualization</td>
+        <td>Grafana</td>
+        <td>3000</td>
+        <td>Live dashboards (admin/omnitech)</td>
+        <td><span class="status-dot status-ok"></span>Monitoring</td>
+      </tr>
+      <tr>
+        <td>📤 Exporter</td>
+        <td>Python custom exporter</td>
+        <td>9200</td>
+        <td>Redis → Prometheus metrics</td>
+        <td><span class="status-dot status-ok"></span>Monitoring</td>
+      </tr>
+      <tr>
+        <td>🛡️ Security AI</td>
+        <td>Python anomaly detector</td>
+        <td>—</td>
+        <td>Detect anomalies, log alerts</td>
+        <td><span class="status-dot status-ok"></span>Security</td>
+      </tr>
+      <tr>
+        <td>⚙️ LLM Quantizer</td>
+        <td>llama.cpp (C++)</td>
+        <td>—</td>
+        <td>GGUF quantization binary</td>
+        <td><span class="status-dot status-warn"></span>Requires binary</td>
+      </tr>
+      <tr>
+        <td>📦 Container</td>
+        <td>Docker Compose v3.9</td>
+        <td>—</td>
+        <td>Orchestrate all 9 services</td>
+        <td><span class="status-dot status-ok"></span>Infra</td>
+      </tr>
+      <tr>
+        <td>💿 ISO Build</td>
+        <td>build_iso.sh (custom)</td>
+        <td>—</td>
+        <td>Bootable USB deployment image</td>
+        <td><span class="status-dot status-ok"></span>Optional</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- TAB: DEPLOY                                                    -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="tab-deploy" class="tab-content">
+  <div class="section-title">🚀 <span>Deployment Guide</span></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+    <div>
+      <p style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:16px;letter-spacing:1px">OPTION 1 — Docker (Recommended)</p>
+      <div class="deploy-steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>Clone & enter directory</h4>
+            <p><code>cd omnitech-omega-v4</code></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>Add your model</h4>
+            <p>Copy your f16 GGUF model: <code>./models/mistral-7b.f16.gguf</code></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>Launch all services</h4>
+            <p><code>docker-compose up -d</code></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h4>Access dashboards</h4>
+            <p>Dashboard: <code>http://localhost:5000</code><br>Grafana: <code>http://localhost:3000</code></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p style="font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:16px;letter-spacing:1px">OPTION 2 — Bare Metal</p>
+      <div class="deploy-steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>Install Python dependencies</h4>
+            <p><code>pip install -r requirements.txt</code></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>Build llama.cpp</h4>
+            <p>Clone and build llama.cpp, place binary at <code>./llama.cpp/quantize</code></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>Start Redis</h4>
+            <p><code>redis-server --daemonize yes</code></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h4>Run OMNITECH</h4>
+            <p><code>chmod +x run.sh && ./run.sh</code></p>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:13px;font-weight:700;color:var(--purple);margin:24px 0 16px;letter-spacing:1px">OPTION 3 — Bootable ISO</p>
+      <div class="deploy-steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>Build the ISO</h4>
+            <p><code>chmod +x build_iso.sh && ./build_iso.sh</code></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>Flash to USB</h4>
+            <p><code>dd if=omnitech-omega.iso of=/dev/sdX bs=4M status=progress</code></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:28px">
+    <div class="section-title">⚙️ <span>Environment Variables</span></div>
+    <div class="code-block">
+<span class="cm"># Core model config</span>
+<span class="cls">OMNITECH_BASE_MODEL</span>=./models/mistral-7b.f16.gguf   <span class="cm"># path to f16 GGUF model</span>
+<span class="cls">OMNITECH_QUANT_BIN</span>=./llama.cpp/quantize              <span class="cm"># llama.cpp quantize binary</span>
+
+<span class="cm"># Reward weights</span>
+<span class="cls">W_TPS</span>=<span class="num">0.6</span>                                            <span class="cm"># weight: speed (tokens/sec)</span>
+<span class="cls">W_ACC</span>=<span class="num">30.0</span>                                           <span class="cm"># weight: accuracy score</span>
+<span class="cls">W_SIZE</span>=<span class="num">0.01</span>                                          <span class="cm"># penalty: model size in MB</span>
+
+<span class="cm"># Security</span>
+<span class="cls">OMNITECH_ALERT_LOG</span>=/var/log/omnitech_alerts.log       <span class="cm"># alert log path</span>
+
+<span class="cm"># Grafana defaults</span>
+<span class="cls">GF_SECURITY_ADMIN_USER</span>=admin
+<span class="cls">GF_SECURITY_ADMIN_PASSWORD</span>=omnitech
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SCRIPTS                                                        -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<script>
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'rl-engine') initRLCharts();
+}
+
+function copyCode(btn) {
+  const code = btn.parentElement.innerText.replace('Copy', '').trim();
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = '✓ Copied';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+
+/* ── Simulated Reward Chart ── */
+const COLORS = {
+  Q2_K:'#ef4444', Q3_K:'#f97316', Q4_K_M:'#eab308',
+  Q5_K_M:'#22c55e', Q6_K:'#6366f1', Q8_0:'#a855f7'
+};
+const QUANTS = ['Q2_K','Q3_K','Q4_K_M','Q5_K_M','Q6_K','Q8_0'];
+
+function simReward(q, step) {
+  const base = {Q2_K:12,Q3_K:18,Q4_K_M:25,Q5_K_M:28,Q6_K:24,Q8_0:20};
+  return base[q] + Math.sin(step * 0.3 + QUANTS.indexOf(q)) * 3 + Math.random() * 2;
+}
+
+function initOverviewCharts() {
+  const labels = Array.from({length:20}, (_,i) => `Step ${i*5+1}`);
+  const datasets = QUANTS.map(q => ({
+    label: q, borderColor: COLORS[q], backgroundColor: COLORS[q]+'22',
+    data: labels.map((_,i) => simReward(q, i)), tension: 0.4, fill: false,
+    pointRadius: 2, borderWidth: 2
+  }));
+  new Chart(document.getElementById('rewardChart'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#e2e8f0', font:{size:11} } } },
+      scales: {
+        x: { ticks:{color:'#64748b'}, grid:{color:'#1c2333'} },
+        y: { ticks:{color:'#64748b'}, grid:{color:'#1c2333'} }
+      }
+    }
+  });
+
+  const tpsData = {Q2_K:68,Q3_K:55,Q4_K_M:42,Q5_K_M:34,Q6_K:26,Q8_0:18};
+  new Chart(document.getElementById('tpsChart'), {
+    type: 'bar',
+    data: {
+      labels: QUANTS,
+      datasets: [{
+        label:'Max TPS (tokens/sec)',
+        data: QUANTS.map(q => tpsData[q]),
+        backgroundColor: QUANTS.map(q => COLORS[q]+'99'),
+        borderColor: QUANTS.map(q => COLORS[q]),
+        borderWidth: 1, borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels:{color:'#e2e8f0'} } },
+      scales: {
+        x: { ticks:{color:'#64748b'}, grid:{color:'#1c2333'} },
+        y: { ticks:{color:'#64748b'}, grid:{color:'#1c2333'} }
+      }
+    }
+  });
+}
+
+let rlChartsInited = false;
+function initRLCharts() {
+  if (rlChartsInited) return;
+  rlChartsInited = true;
+
+  // UCB1 bar chart
+  const ucbScores = {Q2_K:0.82,Q3_K:0.91,Q4_K_M:1.23,Q5_K_M:1.41,Q6_K:1.18,Q8_0:0.97};
+  new Chart(document.getElementById('ucbChart'), {
+    type: 'bar',
+    data: {
+      labels: QUANTS,
+      datasets: [{
+        label:'UCB1 Score',
+        data: QUANTS.map(q => ucbScores[q]),
+        backgroundColor: QUANTS.map(q => COLORS[q]+'bb'),
+        borderColor: QUANTS.map(q => COLORS[q]),
+        borderWidth:1, borderRadius:6
+      }]
+    },
+    options: {
+      responsive:true,
+      plugins:{legend:{labels:{color:'#e2e8f0'}}},
+      scales:{x:{ticks:{color:'#64748b'},grid:{color:'#1c2333'}},y:{ticks:{color:'#64748b'},grid:{color:'#1c2333'}}}
+    }
+  });
+
+  // Exploit ratio over time
+  const steps = Array.from({length:50},(_,i)=>i+1);
+  const exploreRatio = steps.map(s => Math.max(0.1, 1 - s/60 + Math.random()*0.05));
+  const exploitRatio = steps.map((s,i) => 1 - exploreRatio[i]);
+  new Chart(document.getElementById('exploitChart'), {
+    type:'line',
+    data:{
+      labels: steps.map(s=>`Step ${s}`),
+      datasets:[
+        {label:'Exploration',data:exploreRatio,borderColor:'#f59e0b',fill:true,backgroundColor:'rgba(245,158,11,0.1)',tension:0.4,pointRadius:0},
+        {label:'Exploitation',data:exploitRatio,borderColor:'#22d3ee',fill:true,backgroundColor:'rgba(34,211,238,0.1)',tension:0.4,pointRadius:0}
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{labels:{color:'#e2e8f0'}}},
+      scales:{x:{ticks:{color:'#64748b',maxTicksLimit:8},grid:{color:'#1c2333'}},y:{ticks:{color:'#64748b'},grid:{color:'#1c2333'}}}
+    }
+  });
+
+  // Live feed simulation
+  startLiveFeed();
+}
+
+function startLiveFeed() {
+  const feed = document.getElementById('liveFeed');
+  const logs = [
+    ['info','[SCHEDULER] Scheduler started — monitoring job queue'],
+    ['info','[WORKER] Worker started — GPUs detected: [0]'],
+    ['rl','[RL] UCB1 sampling: Q2_K (untried)'],
+    ['rl','[RL] Quantizing model → Q2_K'],
+    ['ok','[WORKER] GPU 0 | Model: mistral-7b.Q2_K.gguf | TPS: 68.4'],
+    ['rl','[RL] Step 1 | Q2_K | TPS: 68.4 | Acc: 0.71 | Reward: 62.6'],
+    ['rl','[RL] UCB1 sampling: Q3_K (untried)'],
+    ['rl','[RL] Step 2 | Q3_K | TPS: 55.2 | Acc: 0.79 | Reward: 57.5'],
+    ['rl','[RL] UCB1 sampling: Q4_K_M (untried)'],
+    ['rl','[RL] Step 3 | Q4_K_M | TPS: 42.1 | Acc: 0.88 | Reward: 51.7'],
+    ['rl','[RL] UCB1 sampling: Q5_K_M (untried)'],
+    ['rl','[RL] Step 4 | Q5_K_M | TPS: 34.6 | Acc: 0.93 | Reward: 49.8'],
+    ['rl','[RL] UCB1 sampling: Q6_K (untried)'],
+    ['rl','[RL] Step 5 | Q6_K | TPS: 26.3 | Acc: 0.97 | Reward: 47.0'],
+    ['rl','[RL] UCB1 sampling: Q8_0 (untried)'],
+    ['rl','[RL] Step 6 | Q8_0 | TPS: 18.1 | Acc: 0.99 | Reward: 40.6'],
+    ['ok','[RL] All quants explored. Switching to UCB1 exploitation...'],
+    ['rl','[RL] UCB1 selected: Q2_K (highest UCB1 score: 1.82)'],
+    ['warn','[SECURITY] Queue depth normal (2/50)'],
+    ['ok','[RL] Best quant so far: Q2_K (reward: 62.6, TPS: 68.4)'],
+    ['rl','[RL] Step 10 | Q4_K_M | TPS: 41.8 | Acc: 0.88 | Reward: 51.4'],
+    ['sec','[SECURITY] Anomaly check passed — all metrics normal'],
+    ['rl','[RL] Converging on Q2_K as optimal quantization...'],
+  ];
+  let idx = 0;
+  const colorMap = {info:'log-info',rl:'log-rl',warn:'log-warn',ok:'log-ok',sec:'log-sec'};
+  function addLog() {
+    if (idx >= logs.length) { idx = 6; }
+    const [type, msg] = logs[idx++];
+    const ts = new Date().toLocaleTimeString();
+    const div = document.createElement('div');
+    div.className = colorMap[type] || 'log-info';
+    div.textContent = `[${ts}] ${msg}`;
+    feed.appendChild(div);
+    feed.scrollTop = feed.scrollHeight;
+  }
+  setInterval(addLog, 800);
+}
+
+initOverviewCharts();
+</script>
+</body>
+</html>

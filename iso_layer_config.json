@@ -1,0 +1,69 @@
+{
+  "iso_image": {
+    "name": "OMNITECH_Q8_AUGMENTED_V4",
+    "version": "4.0.0-QINT2",
+    "compression_target": "Q_INT2",
+    "architecture": "GTX970_CORTEX_A72_HYBRID"
+  },
+
+  "quantization_formats": {
+    "Q2_K": {
+      "bits": 2,
+      "block_size": 32,
+      "symmetric": false
+    },
+    "Q_INT2": {
+      "bits": 2,
+      "mapping": {
+        "00": -3,
+        "01": -1,
+        "10": 1,
+        "11": 3
+      },
+      "symmetric": true,
+      "scale_mode": "dynamic",
+      "zero_point": null
+    }
+  },
+
+  "layer_configuration": {
+    "L0_Layer": {
+      "type": "QLayerL0",
+      "quantization": "Q_INT2",
+      "virtual_vram_offload": true,
+      "neon_optimization": true
+    },
+
+    "Virtual_Layers": {
+      "type": "VirtualNeuralLayer",
+      "quantization": "Q_INT2",
+      "dynamic_scaling": true,
+      "ucb1_policy": "balanced"
+    },
+
+    "Context_Buffer": {
+      "mode": "COMPRESSED_INT8",
+      "size_limit": "2GB",
+      "allow_qint2_overrides": true
+    },
+
+    "Phantom_QINT2_Backup": {
+      "type": "PhantomLayer",
+      "quantization": "Q_INT2",
+      "activation": "on-demand",
+      "shadow_copy": true,
+      "dynamic_scaling": true,
+      "vram_virtualized": true,
+      "priority": "failsafe",
+      "ucb1_visible": false,
+      "description": "Ultra-compact QINT2 phantom layer for backup and crash recovery"
+    }
+  },
+
+  "mining_modules": {
+    "enabled": true,
+    "priority": "background",
+    "engine": "FXION_BITCOIN_HASHER_V1"
+  }
+}
+

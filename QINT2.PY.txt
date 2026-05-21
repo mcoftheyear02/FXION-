@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+# qint2.py
+# QINT2 core module for FXION-ONYX
+
+from typing import List, Tuple
+
+Q_TO_BITS = {
+    -3: "00",
+    -1: "01",
+     1: "10",
+     3: "11",
+}
+
+BITS_TO_Q = {v: k for k, v in Q_TO_BITS.items()}
+LEVELS = [-3, -1, 1, 3]
+
+
+def choose_scale(block: List[float]) -> float:
+    """Dynamic scale: max(|x|)/3 with fallback."""
+    if not block:
+        return 1.0
+    max_abs = max(abs(x) for x in block)
+    return 1.0 if max_abs == 0 else max_abs / 3.0
+
+
+def quantize_block(block: List[float]) -> Tuple[float, List[str]]:
+    """Quantize a block of floats into QINT2 bit codes."""
+    if not block:
+        return 1.0, []
+
+    scale = choose_scale(block)
+    bits_list = []
+
+    for x in block:
+        q_star = round(x / scale)
+        q = min(LEVELS, key=lambda v: abs(v - q_star))
+        bits_list.append(Q_TO_BITS[q])
+
+    return scale, bits_list
+
+
+def dequantize_block(bits_list: List[str], scale: float) -> List[float]:
+    """Dequantize QINT2 bit codes back to floats."""
+    return [scale * BITS_TO_Q[b] for b in bits_list]
+
+
+if __name__ == "__main__":
+    vals = [0.1, -0.5, 0.9, -1.2]
+    scale, bits = quantize_block(vals)
+    rec = dequantize_block(bits, scale)
+
+    print("vals :", vals)
+    print("scale:", scale)
+    print("bits :", bits)
+    print("rec  :", rec)

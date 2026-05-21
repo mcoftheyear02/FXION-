@@ -1,127 +1,139 @@
-version: '3.8'
+version: "3.9"
 
 services:
-  # Redis for job queue and caching
+
   redis:
     image: redis:7-alpine
+    container_name: fxion-redis
+
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+
     ports:
       - "6379:6379"
+
     volumes:
       - redis_data:/data
+
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
+      interval: 10s
+      timeout: 5s
       retries: 5
 
-  # API Server (Flask)
-  api:
+    restart: unless-stopped
+
+  omnitech-api:
     build: .
+
+    container_name: fxion-api
+
+    command: >
+      python omnitech_core.py
+      --api
+      --telemetry
+      --gpu-auto
+
     ports:
-      - "5000:5000"
+      - "9000:9000"
+
     environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - OMNITECH_BASE_MODEL=/models/mistral-7b.f16.gguf
-      - OMNITECH_OUTPUT_DIR=/output
-      - W_TPS=0.6
-      - W_ACC=30.0
-      - W_SIZE=0.01
-    volumes:
-      - ./models:/models:ro
-      - ./output:/output
-      - ./policy_state:/app/state
+      REDIS_URL: redis://redis:6379
+      OMNITECH_QUANT: Q8_0
+      OMNITECH_GPU: auto
+      OMNITECH_THREADS: "16"
+      OMNITECH_CACHE: "true"
+      OMNITECH_TELEMETRY: "true"
+
     depends_on:
       redis:
         condition: service_healthy
-    command: python api/app.py
-    restart: unless-stopped
 
-  # WebSocket Stream Server
-  websocket:
-    build: .
-    ports:
-      - "8765:8765"
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
     volumes:
-      - ./policy_state:/app/state
-    depends_on:
-      - redis
-      - api
-    command: python api/stream_server.py
-    restart: unless-stopped
+      - ./models:/app/models
+      - ./logs:/app/logs
+      - ./cache:/app/cache
 
-  # Worker (for distributed quantization)
-  worker:
-    build: .
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - OMNITECH_BASE_MODEL=/models/mistral-7b.f16.gguf
-      - OMNITECH_QUANT_BIN=/llama.cpp/quantize
-    volumes:
-      - ./models:/models:ro
-      - ./output:/output
-      - ./llama.cpp:/llama.cpp:ro
-    depends_on:
-      - redis
-    command: python core/quantizer_rl.py --iterations 100
+    shm_size: "8gb"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
     deploy:
-      replicas: 2
       resources:
         reservations:
           devices:
             - driver: nvidia
-              count: all
+              count: 1
               capabilities: [gpu]
-    restart: "no"
 
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/omnitech.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - api
-      - websocket
     restart: unless-stopped
 
-  # Prometheus for monitoring
-  prometheus:
-    image: prom/prometheus:latest
+  omnitech-worker:
+    build: .
+
+    container_name: fxion-worker
+
+    command: >
+      python qfx_optimizer.py
+      --worker
+      --adaptive
+      --self-heal
+
+    environment:
+      REDIS_URL: redis://redis:6379
+      OMNITECH_QUANT: Q8_0
+      OMNITECH_BATCH: "32"
+      OMNITECH_PREFETCH: "true"
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    volumes:
+      - ./models:/app/models
+      - ./logs:/app/logs
+
+    deploy:
+      replicas: 2
+
+    restart: unless-stopped
+
+  telemetry:
+    image: prom/prometheus
+
+    container_name: fxion-prometheus
+
     ports:
       - "9090:9090"
+
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
     restart: unless-stopped
 
-  # Grafana for visualization (optional)
-  grafana:
-    image: grafana/grafana:latest
+  dashboard:
+    image: grafana/grafana
+
+    container_name: fxion-grafana
+
     ports:
       - "3000:3000"
+
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      GF_SECURITY_ADMIN_PASSWORD: fxionadmin
+
     volumes:
       - grafana_data:/var/lib/grafana
-    depends_on:
-      - prometheus
+
     restart: unless-stopped
 
 volumes:
   redis_data:
-  prometheus_data:
   grafana_data:
-  policy_state:
-
-networks:
-  default:
-    name: omnitech-network

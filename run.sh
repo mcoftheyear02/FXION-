@@ -1,88 +1,53 @@
-#!/bin/bash
-# OMNITECH OMEGA v3.0 - Main Run Script
-
+#!/usr/bin/env bash
 set -e
 
-echo "=============================================="
-echo "⚡ OMNITECH OMEGA v3.0"
-echo "Autonomous AI Quantization Engine"
-echo "=============================================="
+echo "╔══════════════════════════════════════════════╗"
+echo "║   FXION-ONYX  ·  OMNITECH Q8 ENGINE          ║"
+echo "╚══════════════════════════════════════════════╝"
 
-# Configuration
-export OMNITECH_BASE_MODEL="${OMNITECH_BASE_MODEL:-./models/mistral-7b.f16.gguf}"
-export OMNITECH_QUANT_BIN="${OMNITECH_QUANT_BIN:-./llama.cpp/quantize}"
-export OMNITECH_OUTPUT_DIR="${OMNITECH_OUTPUT_DIR:-./output}"
-export W_TPS="${W_TPS:-0.6}"
-export W_ACC="${W_ACC:-30.0}"
-export W_SIZE="${W_SIZE:-0.01}"
+PYTHON=$(command -v python3 || command -v python)
+if [ -z "$PYTHON" ]; then
+  echo "[ERROR] Python not found. Install Python 3.10+"; exit 1
+fi
 
-# Create output directory
-mkdir -p "$OMNITECH_OUTPUT_DIR"
+MODE=${1:-q8}
 
-# Check if llama.cpp exists, if not offer to clone it
-if [ ! -d "./llama.cpp" ]; then
-    echo ""
-    echo "llama.cpp not found. Would you like to clone it? (y/n)"
-    read -r answer
-    if [ "$answer" = "y" ]; then
-        git clone https://github.com/ggerganov/llama.cpp.git
-        cd llama.cpp
-        make
-        cd ..
+case "$MODE" in
+  q8)
+    echo "[BOOT] Q8 Augmented Quantization"
+    $PYTHON omnitech_core.py --qfx --quant Q8_0
+    ;;
+  neural)
+    echo "[BOOT] Neural Baseline (FP32)"
+    $PYTHON omnitech_core.py --neural
+    ;;
+  qfx)
+    echo "[BOOT] QFX Optimizer"
+    $PYTHON qfx_optimizer.py
+    ;;
+  bench)
+    echo "[BENCH] Quantization Benchmark"
+    $PYTHON -c "
+from system_class import FXIONSystem
+s = FXIONSystem()
+s.start()
+s.run_benchmark()
+"
+    ;;
+  install)
+    echo "[INSTALL] Installing dependencies..."
+    pip install -r requirements.txt
+    if command -v nvcc &>/dev/null; then
+      echo "[CUDA] Compiling fxion_pcie_engine.cu..."
+      nvcc -O3 -arch=sm_52 fxion_pcie_engine.cu -o fxion_pcie_engine
+      echo "[CUDA] Done."
+    else
+      echo "[WARN] nvcc not found — skipping CUDA build."
     fi
-fi
-
-# Install Python dependencies
-echo ""
-echo "Installing Python dependencies..."
-pip install flask websockets redis prometheus_client 2>/dev/null || pip install --user flask websockets redis prometheus_client
-
-# Start services
-echo ""
-echo "Starting OMNITECH OMEGA services..."
-echo ""
-
-# Function to cleanup on exit
-cleanup() {
-    echo ""
-    echo "Shutting down services..."
-    kill $API_PID $WS_PID $WORKER_PID 2>/dev/null || true
-    exit 0
-}
-
-trap cleanup SIGINT SIGTERM
-
-# Start API server
-echo "🌐 Starting API server on port 5000..."
-python api/app.py &
-API_PID=$!
-
-# Start WebSocket server
-echo "📡 Starting WebSocket server on port 8765..."
-python api/stream_server.py &
-WS_PID=$!
-
-# Wait for API to start
-sleep 2
-
-# Run optimization loop if requested
-if [ "$1" = "--run" ] || [ "$1" = "-r" ]; then
-    ITERATIONS="${2:-10}"
-    echo ""
-    echo "🚀 Running RL optimization loop ($ITERATIONS iterations)..."
-    python core/quantizer_rl.py --iterations "$ITERATIONS"
-fi
-
-echo ""
-echo "=============================================="
-echo "✅ Services started successfully!"
-echo ""
-echo "📊 Dashboard: http://localhost:5000"
-echo "🔌 WebSocket: ws://localhost:8765"
-echo "💚 Health:    http://localhost:5000/health"
-echo ""
-echo "Press Ctrl+C to stop all services"
-echo "=============================================="
-
-# Keep running
-wait
+    ;;
+  *)
+    echo "[ERROR] Unknown mode: $MODE"
+    echo "Usage: ./run.sh [q8|neural|qfx|bench|install]"
+    exit 1
+    ;;
+esac

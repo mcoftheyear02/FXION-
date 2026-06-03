@@ -324,15 +324,18 @@ class FXIONCompression:
             scales_len = struct.unpack(">I", payload[4:8])[0]
             compressed_iq2 = payload[8:8+iq2_len]
             compressed_scales = payload[8+iq2_len:8+iq2_len+scales_len]
-            
+
             # Decompress with LZ4 (need to provide uncompressed sizes)
-            iq2_uncompressed_size = ((orig_len + 31) // 32) * (32 // 4)  # packed size
-            scales_uncompressed_size = ((orig_len + 31) // 32) * 4  # float32 per block
+            # orig_len is in bytes, compute float count
+            float_count = orig_len // 4
+            blocks = (float_count + 31) // 32
+            iq2_uncompressed_size = blocks * (32 // 4)  # packed size in bytes
+            scales_uncompressed_size = blocks * 4  # float32 per block in bytes
             iq2_data = self.lz4.decompress(compressed_iq2, uncompressed_size=iq2_uncompressed_size)
             scale_data = self.lz4.decompress(compressed_scales, uncompressed_size=scales_uncompressed_size)
-            
-            # Dequantize
-            decompressed = self._dequantize_iq2_xs(iq2_data, scale_data, orig_len)
+
+            # Dequantize - pass float_count, not orig_len (bytes)
+            decompressed = self._dequantize_iq2_xs(iq2_data, scale_data, float_count)
             # Skip CRC check for IQ2_XS (lossy by design)
         else:
             # Standard mode - first 4 bytes are uncompressed size
@@ -493,7 +496,7 @@ class FXIONCipher:
             "hash_algos": HASH_ALGORITHMS,
             "key_derivation": "PBKDF2-HMAC-SHA256 (50000 iter)",
             "hmac": "SHA-256 + SHA-512 (double)",
-            "compression": "zlib-9 + XOR scramble",
+            "compression": "lz4 + XOR scramble",
             "salt_size": 16,
             "nonce_size": 16,
             "header_size": len(MAGIC) + 1 + 16 + 16 + 96,

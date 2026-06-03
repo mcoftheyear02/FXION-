@@ -144,10 +144,10 @@ class IQ2XSEntropyEngine:
     def compress_with_lz4(self, data: bytes) -> bytes:
         """Compress data using LZ4"""
         return lz4.block.compress(data, store_size=False)
-    
-    def decompress_with_lz4(self, compressed: bytes) -> bytes:
+
+    def decompress_with_lz4(self, compressed: bytes, uncompressed_size: int) -> bytes:
         """Decompress LZ4 data"""
-        return lz4.block.decompress(compressed)
+        return lz4.block.decompress(compressed, uncompressed_size=uncompressed_size)
     
     def generate_entropy_flow(self, seed_data: List[float] = None) -> List[float]:
         """Generate entropy flow using Golden Circle, Tesla, and Fibonacci"""
@@ -315,7 +315,8 @@ def main():
     print(f"    ✓ Compression ratio: {ratio:.2f}x")
     
     # Dequantize and verify
-    decompressed = engine._dequantize_iq2_xs(compressed, scales, len(entropy))
+    packed_indices = engine.decompress_with_lz4(compressed, len(packed))
+    decompressed = engine._dequantize_iq2_xs(packed_indices, scales, len(entropy))
     mae = sum(abs(a - b) for a, b in zip(entropy, decompressed)) / len(entropy)
     print(f"    ✓ Reconstruction MAE: {mae:.6f}")
     

@@ -6,7 +6,7 @@ requests>=2.31.0
 lz4>=4.0.0
 
 # Security & Cryptography
-cryptography>=41.0.0
+cryptography==43.0.1
 pycryptodome>=3.19.0
 bcrypt>=4.1.0
 

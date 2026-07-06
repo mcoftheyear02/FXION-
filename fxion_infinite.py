@@ -628,7 +628,8 @@ if __name__ == "__main__":
     out = engine.infer(x)
     print(f"  Input: {x.shape} -> Output: {out.shape}")
     print(f"  Output mean: {out.mean():.6f}, std: {out.std():.6f}")
-    assert out.shape[-1] == 512
+    if out.shape[-1] != 512:
+        raise AssertionError
     print("  [PASS]")
 
     # Test 2: Batch inference
@@ -636,7 +637,8 @@ if __name__ == "__main__":
     batch = np.random.randn(16, 512).astype(np.float32)
     out = engine.infer(batch)
     print(f"  Batch: {batch.shape} -> Output: {out.shape}")
-    assert out.shape == (16, 512)
+    if out.shape != (16, 512):
+        raise AssertionError
     print("  [PASS]")
 
     # Test 3: Expand neurons
@@ -645,7 +647,8 @@ if __name__ == "__main__":
     engine.expand_neurons(2048)
     after = engine.manager.l0.neuron_count
     print(f"  Neurons: {before} -> {after} (+{after - before})")
-    assert after == before + 2048
+    if after != before + 2048:
+        raise AssertionError
     print("  [PASS]")
 
     # Test 4: Add virtual layers
@@ -654,7 +657,8 @@ if __name__ == "__main__":
     engine.add_layers(4)
     after_layers = len(engine.manager.layers)
     print(f"  Layers: {before_layers} -> {after_layers}")
-    assert after_layers == before_layers + 4
+    if after_layers != before_layers + 4:
+        raise AssertionError
     print("  [PASS]")
 
     # Test 5: Virtual context

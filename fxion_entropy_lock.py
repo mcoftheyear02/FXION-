@@ -2,6 +2,8 @@
 FXION ENTROPY LOCK SYSTEM - EPOCH 4272
 REFINED: CUDA FP16 + IQ2_XS + LZ4/ZTDS + AVX512 + SYNAPSE/NEURON Q-BITS
 Dynamic 256-bit Entropy with Parallel Byte-to-Hash Coherence Linking
+IQ2_XS Variant with LZ4 Compression for Immutable Parameter Stabilization
+Golden Circle Ratio, Tesla Scale, Fibonacci Elliptic Curve, E=MC²
 """
 
 import hashlib
@@ -13,6 +15,8 @@ from typing import Dict, List, Tuple, Any, Optional
 from dataclasses import dataclass, field
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict, List, Tuple, Any
+from dataclasses import dataclass, field
 
 # ============================================================================
 # CONSTANTS - GOLDEN CIRCLE & TESLA CONFIGURATION
@@ -90,6 +94,7 @@ class ImmutableParameters:
 
 class IQ2XSEntropyEngine:
     """IQ2_XS Quantization + LZ4 Compression Entropy Engine with CUDA/AVX512 Optimization"""
+    """IQ2_XS Quantization + LZ4 Compression Entropy Engine"""
     
     def __init__(self):
         self.params = ImmutableParameters()
@@ -130,6 +135,7 @@ class IQ2XSEntropyEngine:
                 result += a * b
         return result
     
+        
     def _quantize_iq2_xs(self, data: List[float]) -> Tuple[bytes, List[float]]:
         """Quantize float32 to IQ2_XS 2-bit indices with per-block scales"""
         n = len(data)
@@ -273,6 +279,16 @@ class IQ2XSEntropyEngine:
         # Generate Q-bit register first
         self.generate_qbit_register()
         
+
+    def decompress_with_lz4(self, compressed: bytes, uncompressed_size: int) -> bytes:
+        """Decompress LZ4 data"""
+        return lz4.block.decompress(compressed, uncompressed_size=uncompressed_size)
+    
+    def generate_entropy_flow(self, seed_data: List[float] = None) -> List[float]:
+        """Generate entropy flow using Golden Circle, Tesla, and Fibonacci"""
+        if seed_data is None:
+            seed_data = []
+        
         flow = []
         phi = self.params.golden_ratio
         
@@ -284,6 +300,7 @@ class IQ2XSEntropyEngine:
                 x_norm = (x % 10000) / 10000.0 - 0.5
                 
                 # Apply Tesla XOR modulation
+                # Apply Tesla XOR modulation (convert to int for XOR operation)
                 x_int = int(x_norm * 1e6)
                 tesla_int = int((tesla / 100.0) * 1e6)
                 xor_val_int = x_int ^ tesla_int
@@ -299,6 +316,7 @@ class IQ2XSEntropyEngine:
                     modulated *= QBIT_ENTANGLEMENT_FACTOR
                 
                 flow.append(self._cuda_fp16_convert(modulated))
+                flow.append(modulated)
         
         # Mix with seed data if provided
         if seed_data:
@@ -314,6 +332,7 @@ class IQ2XSEntropyEngine:
     
     def create_immutable_hash(self) -> str:
         """Create cryptographic hash of all immutable parameters using IQ2_XS + LZ4 with parallel coherence"""
+        """Create cryptographic hash of all immutable parameters using IQ2_XS + LZ4"""
         # Serialize parameters
         param_bytes = self.params.to_bytes()
         
@@ -332,6 +351,8 @@ class IQ2XSEntropyEngine:
         coherence_hash = self.parallel_byte_to_hash(data_chunks)
         
         # Quantize combined data with IQ2_XS
+        # Quantize combined data with IQ2_XS
+        # Convert bytes to float list for quantization
         float_data = []
         for i in range(0, len(combined), 8):
             if i + 8 <= len(combined):
@@ -358,6 +379,14 @@ class IQ2XSEntropyEngine:
         # Combine coherence hash with IQ2_XS+LZ4 payload hash
         payload_hash = hashlib.sha3_512(payload).hexdigest()
         final_hash = hashlib.sha3_512((coherence_hash + payload_hash).encode('utf-8')).hexdigest()
+        # Create final payload
+        payload = struct.pack(">I", len(packed_indices))
+        payload += struct.pack(">I", len(scales))
+        payload += compressed_indices
+        payload += compressed_scales
+        
+        # Generate final hash
+        final_hash = hashlib.sha3_512(payload).hexdigest()
         
         return final_hash
     
@@ -406,6 +435,9 @@ class IQ2XSEntropyEngine:
         active_neurons = sum(self.neuron_activations) if self.neuron_activations else 0
         avg_synapse_weight = sum(self.synapse_weights) / len(self.synapse_weights) if self.synapse_weights else 0
         
+        """Get all stabilized parameters with verification"""
+        verified = self.verify_configuration() if self.is_locked else False
+        
         return {
             "is_locked": self.is_locked,
             "verified": verified,
@@ -422,6 +454,7 @@ class IQ2XSEntropyEngine:
                 "cuda_fp16_enabled": self.params.cuda_fp16_enabled,
                 "avx512_enabled": self.params.avx512_enabled,
                 "qbit_size": self.params.qbit_size
+                "e_mc2_factor": self.params.e_mc2_factor
             },
             "entropy_stats": {
                 "pool_size": len(self.entropy_pool),
@@ -451,6 +484,10 @@ def main():
     print("FXION ENTROPY LOCK SYSTEM - EPOCH 4272")
     print("CUDA FP16 + IQ2_XS + LZ4 + AVX512 + SYNAPSE/NEURON Q-BITS")
     print("Dynamic 256-bit Entropy with Parallel Byte-to-Hash Coherence")
+    """Test the FXION Entropy Lock System"""
+    print("=" * 80)
+    print("FXION ENTROPY LOCK SYSTEM - EPOCH 4272")
+    print("IQ2_XS + LZ4 Immutable Parameter Stabilization")
     print("=" * 80)
     
     engine = IQ2XSEntropyEngine()
@@ -461,6 +498,11 @@ def main():
     print(f"    ✓ Generated {len(entropy)} entropy values")
     print(f"    ✓ Range: [{min(entropy):.6f}, {max(entropy):.6f}]")
     print(f"    ✓ Q-Bit Register: {len(engine.qbit_register)} bits")
+    # Generate entropy flow
+    print("\n[1] Generating Entropy Flow...")
+    entropy = engine.generate_entropy_flow()
+    print(f"    ✓ Generated {len(entropy)} entropy values")
+    print(f"    ✓ Range: [{min(entropy):.6f}, {max(entropy):.6f}]")
     
     # Test IQ2_XS + LZ4 compression
     print("\n[2] Testing IQ2_XS + LZ4 Compression...")
@@ -500,6 +542,13 @@ def main():
     
     # Lock configuration
     print("\n[5] Locking Configuration...")
+    packed_indices = engine.decompress_with_lz4(compressed, len(packed))
+    decompressed = engine._dequantize_iq2_xs(packed_indices, scales, len(entropy))
+    mae = sum(abs(a - b) for a, b in zip(entropy, decompressed)) / len(entropy)
+    print(f"    ✓ Reconstruction MAE: {mae:.6f}")
+    
+    # Lock configuration
+    print("\n[3] Locking Configuration...")
     lock_result = engine.lock_configuration()
     print(f"    ✓ Status: {lock_result['status']}")
     print(f"    ✓ Lock Hash: {lock_result['lock_hash'][:32]}...")
@@ -516,6 +565,14 @@ def main():
     
     # Get stabilized parameters with all stats
     print("\n[7] Stabilized Parameters:")
+    
+    # Verify configuration
+    print("\n[4] Verifying Configuration...")
+    verified = engine.verify_configuration()
+    print(f"    ✓ Verification: {'PASSED' if verified else 'FAILED'}")
+    
+    # Get stabilized parameters
+    print("\n[5] Stabilized Parameters:")
     stabilized = engine.get_stabilized_parameters()
     for key, value in stabilized['parameters'].items():
         print(f"    ✓ {key}: {value}")
@@ -535,6 +592,8 @@ def main():
     print("\n" + "=" * 80)
     print("STATUS: CONFIGURATION_LOCKED_AND_STABILIZED")
     print("CUDA FP16 | IQ2_XS | LZ4 | AVX512 | Q-BITS | SYNAPSE/NEURON")
+    print("\n" + "=" * 80)
+    print("STATUS: CONFIGURATION_LOCKED_AND_STABILIZED")
     print("=" * 80)
     
     return stabilized

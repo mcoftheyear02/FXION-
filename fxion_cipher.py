@@ -324,6 +324,15 @@ class FXIONCompression:
             scales_len = struct.unpack(">I", payload[4:8])[0]
             compressed_iq2 = payload[8:8+iq2_len]
             compressed_scales = payload[8+iq2_len:8+iq2_len+scales_len]
+            
+            # Decompress with LZ4 (need to provide uncompressed sizes)
+            iq2_uncompressed_size = ((orig_len + 31) // 32) * (32 // 4)  # packed size
+            scales_uncompressed_size = ((orig_len + 31) // 32) * 4  # float32 per block
+            iq2_data = self.lz4.decompress(compressed_iq2, uncompressed_size=iq2_uncompressed_size)
+            scale_data = self.lz4.decompress(compressed_scales, uncompressed_size=scales_uncompressed_size)
+            
+            # Dequantize
+            decompressed = self._dequantize_iq2_xs(iq2_data, scale_data, orig_len)
 
             # Decompress with LZ4 (need to provide uncompressed sizes)
             # orig_len is in bytes, compute float count
@@ -496,6 +505,7 @@ class FXIONCipher:
             "hash_algos": HASH_ALGORITHMS,
             "key_derivation": "PBKDF2-HMAC-SHA256 (50000 iter)",
             "hmac": "SHA-256 + SHA-512 (double)",
+            "compression": "zlib-9 + XOR scramble",
             "compression": "lz4 + XOR scramble",
             "salt_size": 16,
             "nonce_size": 16,

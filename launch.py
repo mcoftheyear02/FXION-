@@ -477,7 +477,8 @@ def mode_cipher():
     msg = "FXION-ONYX Q8 Augmented -- Confidential Payload"
     enc = cipher.encrypt_str(msg)
     dec = cipher.decrypt_str(enc)
-    assert dec == msg
+    if dec != msg:
+        raise AssertionError
     ok(f"'{msg[:30]}...' -> {len(enc)} bytes -> d chiffr  OK")
 
     # Test 2: Binary data
@@ -486,7 +487,8 @@ def mode_cipher():
     data = _os.urandom(4096)
     enc = cipher.encrypt(data)
     dec = cipher.decrypt(enc)
-    assert dec == data
+    if dec != data:
+        raise AssertionError
     ok(f"{len(data)}B -> {len(enc)}B chiffr  (overhead: +{len(enc)-len(data)}B) -> OK")
 
     # Test 3: Tamper detection

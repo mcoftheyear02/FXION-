@@ -1,7 +1,13 @@
 ```
-# Python
-__pycache__/
+# Python compiled files
 *.pyc
+__pycache__/
+
+# Backups
+backups/
+
+# Compressed files
+*.tar.gz
 *.pyo
 *.pyd
 *.py~

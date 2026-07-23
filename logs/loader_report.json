@@ -1,0 +1,147 @@
+{
+  "timestamp": "2026-07-11T08:41:25.739759",
+  "categories": {
+    "security": {
+      "fxion_secure_vault": {
+        "status": "OK",
+        "size": 39645
+      },
+      "secure_vault": {
+        "status": "OK",
+        "size": 28702
+      },
+      "security_core": {
+        "status": "OK",
+        "size": 3025
+      },
+      "fxion_cipher": {
+        "status": "OK",
+        "size": 25958
+      },
+      "fxion_entropy_lock": {
+        "status": "OK",
+        "size": 13468
+      }
+    },
+    "ai": {
+      "ai_engine": {
+        "status": "OK",
+        "size": 840
+      },
+      "ai_engine_qfx": {
+        "status": "OK",
+        "size": 1071
+      },
+      "neural_core": {
+        "status": "OK",
+        "size": 1217
+      },
+      "neural_core_qfx": {
+        "status": "OK",
+        "size": 1457
+      },
+      "convolutive_ai": {
+        "status": "OK",
+        "size": 3845
+      },
+      "autotrain_fxion": {
+        "status": "OK",
+        "size": 1703
+      }
+    },
+    "mining": {
+      "bitcoin_miner_qfx": {
+        "status": "OK",
+        "size": 2444
+      },
+      "gpu_stratum_miner": {
+        "status": "OK",
+        "size": 2246
+      },
+      "fxion_real_mining_kernel": {
+        "status": "OK",
+        "size": 1355
+      },
+      "mine_wallet": {
+        "status": "OK",
+        "size": 6165
+      },
+      "fxion_wallet": {
+        "status": "OK",
+        "size": 14724
+      },
+      "fxion_pool_connector": {
+        "status": "OK",
+        "size": 5783
+      }
+    },
+    "core": {
+      "FXION_MASTER_CONTROL": {
+        "status": "OK",
+        "size": 19114
+      },
+      "FXION_ONYX_FINAL": {
+        "status": "OK",
+        "size": 13583
+      },
+      "launch": {
+        "status": "OK",
+        "size": 24668
+      },
+      "system_root": {
+        "status": "OK",
+        "size": 7090
+      },
+      "system_class": {
+        "status": "OK",
+        "size": 6361
+      },
+      "fxion_infinite": {
+        "status": "OK",
+        "size": 27973
+      }
+    },
+    "support": {
+      "onyx_qlayer": {
+        "status": "OK",
+        "size": 3050
+      },
+      "nnox_scheduler": {
+        "status": "OK",
+        "size": 2697
+      },
+      "fxion_self_heal": {
+        "status": "OK",
+        "size": 3873
+      },
+      "cryptosavior_sdk": {
+        "status": "OK",
+        "size": 9523
+      },
+      "shadow_watchdog": {
+        "status": "OK",
+        "size": 2227
+      },
+      "hardware_telemetry": {
+        "status": "OK",
+        "size": 4168
+      },
+      "phantom_memory": {
+        "status": "OK",
+        "size": 1328
+      },
+      "qfx_optimizer": {
+        "status": "OK",
+        "size": 6382
+      },
+      "fusion_engine_kv_optimized": {
+        "status": "OK",
+        "size": 8090
+      }
+    }
+  },
+  "summary": {
+    "total_ok": 32,
+    "total_error": 0
+  }
+}

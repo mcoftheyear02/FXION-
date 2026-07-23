@@ -1,0 +1,27 @@
+{
+  "current_profile": {
+    "primary_emotion": "colere",
+    "intensity": 0.1327656644158939,
+    "secondary_emotions": {
+      "peur": 0.07965939864953635,
+      "curiosite": 0.023424607282765984
+    },
+    "timestamp": "2026-07-12T01:39:16.014795",
+    "trigger": "critical_error",
+    "decay_rate": 0.09084798364045239
+  },
+  "base_temperament": {
+    "joie": 0.6,
+    "tristesse": 0.2,
+    "colere": 0.15,
+    "peur": 0.1,
+    "surprise": 0.4,
+    "confiance": 0.7,
+    "anticipation": 0.5,
+    "curiosite": 0.8,
+    "serenite": 0.65,
+    "excitation": 0.45
+  },
+  "history_count": 9,
+  "last_update": "2026-07-12T01:39:16.014888"
+}

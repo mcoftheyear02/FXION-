@@ -25,36 +25,19 @@ backups/
 *.tar.gz
 *.pyo
 *.pyd
-*.py~
-*.py.class
-*.py.backup
-*.swp
-*.swo
-
-# Dependencies
-venv/
-.venv/
-.env
-.env.local
-.env.*
 
 # Editors
 .vscode/
 .idea/
 # Logs
+logs/
 *.log
 
-# Coverage
-.coverage
-coverage/
-htmlcov/
+# Dependencies
+.venv/
+venv/
+env/
 
-# Testing
-.pytest_cache/
-.mypy_cache/
-
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
+# Security/Build artifacts
+security/__pycache__/
 ```

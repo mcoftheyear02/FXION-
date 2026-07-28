@@ -333,6 +333,7 @@ class OmegaMetaDriverFusion:
     
     def __init__(self, config: Dict = None):
         self.config = config or OMEGA_CONFIG
+        self.version = "v3.0-FUSION"  # Version du Meta Driver Fusion
         self.coherence_engine = OmegaCoherenceEngine(
             dimension=self.config["core"]["dimension"]
         )

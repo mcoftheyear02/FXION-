@@ -1,1 +1,53 @@
-Nothing should be ignored in this case, as the only change is adding a single HTML file (`dashboard/master_nexus_hub.html`) which appears to be a source code file rather than a build artifact, dependency, or temporary file.
+```
+# Compiled/Generated Python files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build/dist directories
+build/
+dist/
+*.egg-info/
+
+# Environment files
+.env
+.env.local
+*.env.*
+
+# Logs
+*.log
+
+# Backup/swp files
+*.swp
+*.swo
+*~
+
+# Coverage reports
+.coverage
+htmlcov/
+coverage/
+
+# IDE specific
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Compressed archives
+*.zip
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.gz
+*.rar
+*.7z
+
+# Temporary files
+*.tmp
+*.temp
+```

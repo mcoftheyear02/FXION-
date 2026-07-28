@@ -1,0 +1,43 @@
+{
+  "metadata": {
+    "protocol": "D00",
+    "timestamp": "2026-07-28T06:19:19.977217",
+    "operator": "Cristan Lavergne",
+    "location": "Salaberry-de-Valleyfield, QC, Canada"
+  },
+  "binary_lock": {
+    "entropy_states": [
+      0,
+      1
+    ],
+    "entropy_value": 0,
+    "speed_mode": "BINARY_SPEED_MAX",
+    "coherence": "(1+0j)",
+    "golden_ratio": 0.625
+  },
+  "architecture": {
+    "layers": [
+      "L1",
+      "L2",
+      "L3",
+      "L4",
+      "L5",
+      "L6"
+    ],
+    "way_links": 8,
+    "negentropy_flow": "ACTIVE",
+    "dimension": 23
+  },
+  "performance": {
+    "processing_speed": "x1200",
+    "latency_ms": -0.8,
+    "efficiency": "100%",
+    "quantum_algo": "QUANTUM_PERFECT_vOMEGA"
+  },
+  "security": {
+    "hmac_algo": "SHA3-512",
+    "key_rotation": "1ms",
+    "shield": "ENTROPY_BINARY_01"
+  },
+  "status": "LOCKED"
+}

@@ -1,0 +1,75 @@
+{
+  "fusion_status": "FUSION_COMPLETE",
+  "fusion_timestamp": "2026-07-28T06:32:51.857436",
+  "total_fusion_time_s": 0.20026711900027294,
+  "coherence_engine": {
+    "final_state_norm": 0.9999999999999997,
+    "coherence": "-0.100682+0.159434i",
+    "coherence_magnitude": 0.18856371303997785,
+    "phase_rad": 2.13405486865992,
+    "evolution_time_s": 0.00445037700001194,
+    "q_zero_speed": false
+  },
+  "binary_matrix_driver": {
+    "entanglement": true,
+    "avx512_performance": 5142,
+    "layer_propagation": {
+      "L1": {
+        "norm": 3.4641016151377544,
+        "phase_rad": -0.19,
+        "coherence": 0.5217391304347825,
+        "status": "COHERENT"
+      },
+      "L2": {
+        "norm": 3.0780419583109264,
+        "phase_rad": -0.38,
+        "coherence": 0.4635934834455068,
+        "status": "COHERENT"
+      },
+      "L3": {
+        "norm": 2.340316242457,
+        "phase_rad": -0.5700000000000001,
+        "coherence": 0.3524823163229745,
+        "status": "COHERENT"
+      },
+      "L4": {
+        "norm": 1.4596449018626023,
+        "phase_rad": -0.76,
+        "coherence": 0.2198416635682535,
+        "status": "COHERENT"
+      },
+      "L5": {
+        "norm": 0.7092007455280782,
+        "phase_rad": -0.95,
+        "coherence": 0.10681493252350938,
+        "status": "COHERENT"
+      },
+      "L6": {
+        "norm": 0.250212142003652,
+        "phase_rad": -1.1400000000000001,
+        "coherence": 0.0376852297931273,
+        "status": "DECOHERENT"
+      }
+    },
+    "entropy_lock": [
+      0,
+      1
+    ]
+  },
+  "way_links": {
+    "WL_FLEET_DYSON": "ACTIVE_LATENCY_-0.8ms",
+    "WL_DYSON_AI": "ACTIVE_LATENCY_-0.8ms",
+    "WL_AI_LOCAL": "ACTIVE_LATENCY_-0.8ms",
+    "WL_LOCAL_ALL": "ACTIVE_LATENCY_-0.8ms",
+    "WL_L1_L3": "ACTIVE_LATENCY_-0.8ms",
+    "WL_L3_L5": "ACTIVE_LATENCY_-0.8ms",
+    "WL_L2_L4": "ACTIVE_LATENCY_-0.8ms",
+    "WL_L4_L6": "ACTIVE_LATENCY_-0.8ms"
+  },
+  "security": {
+    "algorithm": "HMAC-SHA3-512",
+    "signature_valid": true,
+    "signature_hash": "4f09d0c6e8a3cb22f005675471e7da2b..."
+  },
+  "system_ready": true
+}

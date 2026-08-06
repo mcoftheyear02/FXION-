@@ -1,3 +1,6 @@
+// Copyright (c) 2026 mcoftheyear02
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 """
 NEURAL CORE — CPU/GPU Neural Engine (FP32 baseline)
 """

@@ -85,4 +85,7 @@ FXION-ONYX-FINAL/
 - numpy, flask, redis-py
 
 ## License
-MIT — OMNITECH / FXION-ONYX Project
+
+This project is licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later). See LICENSE.
+
+Note: Previous releases of this project were published under the MIT License and remain available under that license.

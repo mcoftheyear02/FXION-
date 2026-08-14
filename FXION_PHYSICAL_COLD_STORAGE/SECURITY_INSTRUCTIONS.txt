@@ -1,0 +1,9 @@
+FXION OMEGA COLD STORAGE INSTRUCTIONS
+=====================================
+1. Copy this folder to a USB drive and delete from PC.
+2. Private key encrypted with AES-256-GCM.
+3. NEVER share the RECOVERY_SEED.txt file.
+4. Store master key (.fxion_key or FXION_WALLET_KEY env var) separately.
+5. To recover: Ensure master key is available, then run wallet recovery.
+
+WARNING: Loss of master key = permanent loss of funds!

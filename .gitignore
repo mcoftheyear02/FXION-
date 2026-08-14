@@ -1,44 +1,37 @@
-```gitignore
-# Python compiled files
-*.pyc
+```
+# Python
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
 
-# Logs and temporary files
-*.log
-*.tmp
-
-# Environment files
+# Environment
 .env
 .env.local
 *.env.*
 
-# Editor/IDE files
-.vscode/
-.idea/
+# Security keys and credentials
+.fxion_key
+FXION_PHYSICAL_COLD_STORAGE/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
 *.swp
 *.swo
-
-# Dependencies
-.venv/
-venv/
-node_modules/
-
-# Build artifacts
-dist/
-build/
-target/
 
 # Coverage reports
 coverage/
 htmlcov/
 .coverage
 
-# Cache directories
-.mypy_cache/
-.pytest_cache/
-.gradle/
+# IDE
+.vscode/
+.idea/
 
-# System files
+# OS
 .DS_Store
 Thumbs.db
 ```
